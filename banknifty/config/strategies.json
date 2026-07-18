@@ -1,0 +1,22 @@
+{
+  "strategies": [
+    {
+      "id": "utlrg",
+      "name": "BN-UTLRG",
+      "description": "UT Bot + Linear Regression Candles on BankNifty 5m",
+      "active": true,
+      "instrument": "BANKNIFTY",
+      "exchange": "NSE",
+      "segment": "NFO",
+      "option_type": "monthly",
+      "strike_interval": 100,
+      "lot_size": 30,
+      "timeframe_minutes": 5,
+      "trading_start": "09:20",
+      "trading_end": "15:00",
+      "squareoff_time": "15:20",
+      "webhook_path": "/webhook/utlrg",
+      "day_bias": "no_trade"
+    }
+  ]
+}

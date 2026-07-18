@@ -1,0 +1,32 @@
+{
+  "description": "NSE Trading Holidays — Official Calendar",
+  "instructions": {
+    "update_frequency": "Annually — every December for the following year",
+    "source": "NSE India official circular — nseindia.com > About NSE > Investor Relations > Circulars > Search 'trading holidays <year>'",
+    "update_steps": [
+      "1. Download the official NSE holiday circular every December",
+      "2. Add the new year's holidays to the 'holidays' array below",
+      "3. Update 'last_updated' and 'valid_through' fields",
+      "4. Restart the SMB Algo app — holiday cache reloads automatically",
+      "5. Verify on dashboard — holiday calendar status shows green"
+    ],
+    "format": "YYYY-MM-DD (ISO 8601)",
+    "warning": "Past holidays can be removed once the year is over. Always keep current + next year loaded."
+  },
+  "last_updated": "2026-06-04",
+  "valid_through": "2026-12-31",
+  "holidays": {
+    "2026": [
+      { "date": "2026-06-26", "day": "Friday",   "occasion": "Muharram" },
+      { "date": "2026-09-14", "day": "Monday",   "occasion": "Ganesh Chaturthi" },
+      { "date": "2026-10-02", "day": "Friday",   "occasion": "Mahatma Gandhi Jayanti" },
+      { "date": "2026-10-20", "day": "Tuesday",  "occasion": "Dussehra" },
+      { "date": "2026-11-10", "day": "Tuesday",  "occasion": "Diwali - Balipratipada" },
+      { "date": "2026-11-24", "day": "Tuesday",  "occasion": "Prakash Gurpurb Sri Guru Nanak Dev" },
+      { "date": "2026-12-25", "day": "Friday",   "occasion": "Christmas" }
+    ],
+    "2027": [
+      { "date": "2027-01-01", "day": "placeholder", "occasion": "UPDATE REQUIRED — Add 2027 holidays in December 2026" }
+    ]
+  }
+}

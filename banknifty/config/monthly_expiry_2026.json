@@ -1,0 +1,18 @@
+{
+  "year": 2026,
+  "description": "Monthly expiry dates for all indices and F&O stocks (last Tuesday of month, holiday-adjusted). Used for BankNifty and other monthly-expiry instruments. Nifty weekly options are the only divergence (weekly Tuesday expiry).",
+  "expiry_dates": [
+    "2026-01-27",
+    "2026-02-24",
+    "2026-03-31",
+    "2026-04-28",
+    "2026-05-26",
+    "2026-06-30",
+    "2026-07-28",
+    "2026-08-25",
+    "2026-09-29",
+    "2026-10-27",
+    "2026-11-24",
+    "2026-12-29"
+  ]
+}

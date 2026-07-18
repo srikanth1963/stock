@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html><head><title>SMB Algo Session</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#080b0f;color:#e8edf2;font-family:monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#0d1117;border:1px solid #1e2d3d;border-radius:8px;padding:32px;max-width:420px;width:100%}
+h2{font-size:16px;color:#00e5ff;margin-bottom:8px}
+p{font-size:12px;color:#6a7d8f;margin-bottom:20px;line-height:1.6}
+.status{font-size:13px;padding:12px;border-radius:6px;margin-bottom:20px}
+.ok{background:#001a0a;border:1px solid #00401a;color:#00e676}
+.err{background:#1a0008;border:1px solid #4a0015;color:#ff3d57}
+.info{background:#001529;border:1px solid #003a6e;color:#40a9ff}
+label{font-size:10px;color:#6a7d8f;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px}
+input,select{width:100%;padding:10px;background:#131920;border:1px solid #1e2d3d;border-radius:4px;color:#e8edf2;font-family:monospace;font-size:13px;outline:none;margin-bottom:12px}
+button{width:100%;padding:12px;background:#001529;border:1px solid #003a6e;color:#40a9ff;border-radius:4px;font-family:monospace;font-size:12px;font-weight:600;cursor:pointer}
+button:hover{background:#1890ff;color:white}
+.steps{font-size:12px;color:#a8b8c8;line-height:2;margin-top:16px;background:#131920;border:1px solid #1e2d3d;border-radius:4px;padding:14px}
+</style></head>
+<body><div class="card">
+<h2>SMB Algo - Session Login</h2>
+<p>Activate your Breeze API session for today's trading.</p>
+<div id="status" class="status info">Enter your session token below.</div>
+<label>Account</label>
+<select id="accountSelect"></select>
+<label>Session Token</label>
+<input type="text" id="tokenInput" placeholder="e.g. 55861212"/>
+<button onclick="submitToken()">Activate Session</button>
+<div class="steps">
+HOW TO GET TOKEN EACH MORNING:<br>
+1. Open Refresh Session on dashboard<br>
+2. Log in on ICICIdirect page<br>
+3. Copy number after #token= in URL<br>
+4. Paste above and click Activate
+</div></div>
+<script>
+fetch('/auth/breeze/session-status').then(r=>r.json()).then(data=>{
+  const sel=document.getElementById('accountSelect');
+  (data.accounts||[]).forEach(a=>{
+    const opt=document.createElement('option');
+    opt.value=a.name;opt.text=a.name+(a.paper_mode?' (Paper)':' (Live)');
+    sel.appendChild(opt);
+  });
+  const p=localStorage.getItem('pending_account_login');
+  if(p)sel.value=p;
+});
+const f=window.location.hash;
+const p=new URLSearchParams(f.replace('#',''));
+const t=p.get('token')||p.get('session_token')||p.get('apisession');
+if(t){document.getElementById('tokenInput').value=t;
+  document.getElementById('status').className='status ok';
+  document.getElementById('status').textContent='Token captured! Click Activate Session.';}
+function submitToken(){
+  const account=document.getElementById('accountSelect').value;
+  const token=document.getElementById('tokenInput').value.trim();
+  if(!account||!token){document.getElementById('status').className='status err';
+    document.getElementById('status').textContent='Please select account and enter token.';return;}
+  document.getElementById('status').className='status info';
+  document.getElementById('status').textContent='Activating...';
+  fetch('/auth/breeze/set-token',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_name:account,session_token:token})})
+  .then(r=>r.json()).then(data=>{
+    if(data.status==='ok'){
+      document.getElementById('status').className='status ok';
+      document.getElementById('status').textContent='Session activated for '+account+'! Close this tab.';
+      localStorage.removeItem('pending_account_login');
+      if(window.opener)window.opener.postMessage({type:'SESSION_READY',account:account},'*');
+    }else{document.getElementById('status').className='status err';
+      document.getElementById('status').textContent='Error: '+data.message;}
+  });
+}
+</script></body></html>

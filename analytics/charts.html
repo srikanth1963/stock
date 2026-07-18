@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SMB Algo Charts</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F6F9;--surface:#FFFFFF;--surface2:#F0F2F5;--border:#E2E6ED;
+  --text-0:#0F1923;--text-1:#2D3748;--text-2:#64748B;--text-3:#94A3B8;
+  --buy:#0A7C4B;--buy-bg:#EDFAF4;--sell:#C0171D;--sell-bg:#FEF2F2;
+  --blue:#1D4ED8;--mono:"DM Mono",monospace;--sans:"DM Sans",sans-serif;--r:10px;
+  --shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text-0);font-family:var(--sans);font-size:14px}
+.topbar{background:var(--text-0);color:#fff;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-logo{font-family:var(--mono);font-size:15px;font-weight:500;letter-spacing:0.06em}
+.topbar-sub{font-size:11px;color:#94A3B8;font-family:var(--mono);margin-left:12px}
+.topbar-time{font-family:var(--mono);font-size:13px;color:#CBD2DC;background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px}
+.nav-links{display:flex;gap:8px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.nav-link{font-size:13px;font-weight:500;color:var(--blue);padding:5px 12px;border:1.5px solid #BFDBFE;border-radius:7px;background:#EFF6FF;cursor:pointer;text-decoration:none}
+.nav-link:hover{background:var(--blue);color:#fff}
+.tab-bar{display:flex;gap:0;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{padding:12px 18px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;font-family:var(--sans);color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--blue);border-bottom:2px solid var(--blue)}
+.tab:hover{color:var(--text-0)}
+.tab.disabled{opacity:0.4;cursor:not-allowed}
+.page{padding:24px;max-width:1200px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.chart-title{font-size:15px;font-weight:600}
+.chart-sub{font-size:12px;color:var(--text-2);margin-top:2px}
+.legend{display:flex;gap:16px;margin-bottom:12px;font-size:12px;color:var(--text-2);flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:10px;height:10px;border-radius:2px}
+.signal-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.chip-buy{background:var(--buy-bg);color:var(--buy)}
+.chip-sell{background:var(--sell-bg);color:var(--sell)}
+.coming-soon{text-align:center;padding:60px 20px;color:var(--text-3)}
+.coming-soon h3{font-size:16px;font-weight:500;margin-bottom:8px;color:var(--text-2)}
+.spinner{text-align:center;padding:40px;color:var(--text-2)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const {useState,useEffect,useRef} = React;
+const e = React.createElement;
+const API = "/analytics";
+
+async function api(path) {
+  try { const r = await fetch(API+path); return await r.json(); }
+  catch(err) { return null; }
+}
+
+function Clock() {
+  const [t,setT] = useState("");
+  useEffect(()=>{
+    const tick=()=>setT(new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"Asia/Kolkata",hour12:true})+" IST");
+    tick(); const id=setInterval(tick,1000); return()=>clearInterval(id);
+  },[]);
+  return e("span",{className:"topbar-time"},t);
+}
+
+function BreadthChart() {
+  const breadthRef = useRef(null);
+  const niftyRef = useRef(null);
+  const corrRef = useRef(null);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const breadthChartRef = useRef(null);
+  const niftyChartRef = useRef(null);
+  const corrChartRef = useRef(null);
+
+  useEffect(()=>{
+    api("/api/analytics/breadth").then(d=>{
+      setLoading(false);
+      if(d && d.status==="ok") setData(d);
+    });
+  },[]);
+
+  useEffect(()=>{
+    if(!data || !breadthRef.current || !niftyRef.current) return;
+
+    if(breadthChartRef.current) breadthChartRef.current.destroy();
+    if(niftyChartRef.current) niftyChartRef.current.destroy();
+
+    const dates = data.dates;
+    const sma = data.sma;
+    const nifty = data.nifty;
+    const buyDates = new Set(data.signals.filter(s=>s.type==="BUY").map(s=>s.date));
+    const sellDates = new Set(data.signals.filter(s=>s.type==="SELL").map(s=>s.date));
+
+    const gridColor = "#e1e0d9";
+    const textMuted = "#898781";
+    const xOpts = {
+      type:"category",
+      ticks:{maxTicksLimit:10,color:textMuted,font:{size:11},maxRotation:0},
+      grid:{display:false}
+    };
+    const yOpts = (label)=>({
+      title:{display:true,text:label,color:textMuted,font:{size:11}},
+      ticks:{color:textMuted,font:{size:11}},
+      grid:{color:gridColor}
+    });
+
+    breadthChartRef.current = new Chart(breadthRef.current, {
+      type:"line",
+      data:{
+        labels:dates,
+        datasets:[{
+          label:"Breadth SMA",
+          data:sma,
+          borderColor:"#2a78d6",
+          borderWidth:2,
+          pointRadius:dates.map(d=>buyDates.has(d)||sellDates.has(d)?6:0),
+          pointBackgroundColor:dates.map(d=>buyDates.has(d)?"#0ca30c":sellDates.has(d)?"#d03b3b":"#2a78d6"),
+          pointBorderColor:"#fff",
+          pointBorderWidth:2,
+          tension:0.3,fill:false,spanGaps:true
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{afterLabel:ctx=>{
+            const d=ctx.label;
+            if(buyDates.has(d)) return "▲ BUY SIGNAL";
+            if(sellDates.has(d)) return "▼ SELL SIGNAL";
+            return "";
+          }}}
+        },
+        scales:{x:xOpts,y:yOpts("Breadth SMA")}
+      }
+    });
+
+    niftyChartRef.current = new Chart(niftyRef.current, {
+      type:"line",
+      data:{
+        labels:dates,
+        datasets:[{
+          label:"Nifty Futures",
+          data:nifty,
+          borderColor:"#4a3aa7",
+          borderWidth:2,
+          pointRadius:0,
+          tension:0.2,fill:false,spanGaps:true
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:xOpts,y:yOpts("Nifty Futures")}
+      }
+    });
+
+    if(corrRef.current && data.sma_z) {
+      if(corrChartRef.current) corrChartRef.current.destroy();
+      corrChartRef.current = new Chart(corrRef.current, {
+        type:"line",
+        data:{
+          labels:dates,
+          datasets:[
+            {label:"Breadth SMA (z)",data:data.sma_z,borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:0.3,fill:false,spanGaps:true},
+            {label:"Nifty (z)",data:data.nifty_z,borderColor:"#4a3aa7",borderWidth:1.5,borderDash:[4,3],pointRadius:0,tension:0.2,fill:false,spanGaps:true},
+            {label:"Divergence",data:data.div,borderColor:"#e87ba4",borderWidth:1.5,pointRadius:dates.map(d=>(data.div_signals||[]).find(s=>s.date===d)?6:0),pointBackgroundColor:dates.map(d=>{const s=(data.div_signals||[]).find(x=>x.date===d);return s?(s.type==='BUY'?'#0ca30c':'#d03b3b'):'#e87ba4';}),pointBorderColor:'#fff',pointBorderWidth:2,tension:0.1,fill:false,spanGaps:true}
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:xOpts,y:yOpts("Z-score")}}
+      });
+    }
+    return ()=>{
+      if(breadthChartRef.current) breadthChartRef.current.destroy();
+      if(niftyChartRef.current) niftyChartRef.current.destroy();
+      if(corrChartRef.current) corrChartRef.current.destroy();
+    };
+  },[data]);
+
+  if(loading) return e("div",{className:"spinner"},"Loading breadth data...");
+  if(!data) return e("div",{className:"spinner"},"Failed to load data");
+
+  const recentSignals = data.signals.slice(-8).reverse();
+
+  return e("div",null,
+    e("div",{className:"card"},
+      e("div",{className:"chart-header"},
+        e("div",null,
+          e("div",{className:"chart-title"},"Market breadth — 20-day SMA"),
+          e("div",{className:"chart-sub"},data.dates[0]+" → "+data.dates[data.dates.length-1]+" · "+data.count+" days · "+data.signals.length+" signals")
+        )
+      ),
+      e("div",{className:"legend"},
+        e("span",{className:"legend-item"},e("span",{className:"legend-dot",style:{background:"#2a78d6"}}),"Breadth SMA"),
+        e("span",{className:"legend-item"},e("span",{className:"legend-dot",style:{borderRadius:"50%",background:"#0ca30c"}}),"Buy signal"),
+        e("span",{className:"legend-item"},e("span",{className:"legend-dot",style:{borderRadius:"50%",background:"#d03b3b"}}),"Sell signal")
+      ),
+      e("div",{style:{position:"relative",width:"100%",height:"220px"}},
+        e("canvas",{id:"breadthCanvas",ref:breadthRef,role:"img","aria-label":"Market breadth SMA chart with signals"},"Breadth SMA over time")
+      )
+    ),
+    e("div",{className:"card"},
+      e("div",{className:"chart-header"},
+        e("div",null,
+          e("div",{className:"chart-title"},"Nifty futures close"),
+          e("div",{className:"chart-sub"},"Daily closing price")
+        )
+      ),
+      e("div",{className:"legend"},
+        e("span",{className:"legend-item"},e("span",{className:"legend-dot",style:{background:"#4a3aa7"}}),"Nifty futures")
+      ),
+      e("div",{style:{position:"relative",width:"100%",height:"200px"}},
+        e("canvas",{id:"niftyCanvas",ref:niftyRef,role:"img","aria-label":"Nifty futures closing price"},"Nifty futures over time")
+      )
+    ),
+    e("div",{className:"card"},
+      e("div",{className:"chart-header"},
+        e("div",null,
+          e("div",{className:"chart-title"},"Normalized correlation (z-score)"),
+          e("div",{className:"chart-sub"},"Breadth SMA vs Nifty — divergence signals distribution or accumulation")
+        )
+      ),
+      e("div",{className:"legend"},
+        e("span",{className:"legend-item"},e("span",{className:"legend-dot",style:{background:"#2a78d6"}}),"Breadth SMA (z)"),
+        e("span",{className:"legend-item"},e("span",{className:"legend-dot",style:{background:"#4a3aa7"}}),"Nifty (z)")
+      ),
+      e("div",{style:{position:"relative",width:"100%",height:"200px"}},
+        e("canvas",{ref:corrRef,role:"img","aria-label":"Normalized correlation"},"z-score chart")
+      )
+    ),
+    e("div",{className:"card"},
+      e("div",{className:"chart-title",style:{marginBottom:10}},"Recent signals"),
+      e("div",{className:"signal-chips"},
+        recentSignals.map((s,i)=>
+          e("span",{key:i,className:"chip "+(s.type==="BUY"?"chip-buy":"chip-sell")},
+            (s.type==="BUY"?"▲ ":"▼ ")+s.date+" · Nifty "+(s.nifty?s.nifty.toFixed(0):"—")
+          )
+        )
+      )
+    )
+  );
+}
+
+const TABS = [
+  {id:"breadth", label:"Market breadth"},
+  {id:"iv", label:"IV / IVP", disabled:true},
+  {id:"pcr", label:"PCR", disabled:true},
+  {id:"poip", label:"PoIP", disabled:true},
+];
+
+function App() {
+  const [tab, setTab] = useState("breadth");
+
+  return e("div",null,
+    e("div",{className:"topbar"},
+      e("div",{style:{display:"flex",alignItems:"center"}},
+        e("span",{className:"topbar-logo"},"SMB ALGO"),
+        e("span",{className:"topbar-sub"},"CHARTS")
+      ),
+      e(Clock)
+    ),
+    e("div",{className:"nav-links"},
+      e("a",{className:"nav-link",href:"/"},"← Nifty"),
+      e("a",{className:"nav-link",href:"/banknifty/"},"← BankNifty"),
+      e("a",{className:"nav-link",href:"/stocks/"},"← Stocks"),
+      e("a",{className:"nav-link",href:"/analytics/"},"← Analytics")
+    ),
+    e("div",{className:"tab-bar"},
+      TABS.map(t=>e("button",{
+        key:t.id,
+        className:"tab"+(tab===t.id?" active":"")+(t.disabled?" disabled":""),
+        onClick:()=>!t.disabled&&setTab(t.id)
+      },t.label))
+    ),
+    e("div",{className:"page"},
+      tab==="breadth" ? e(BreadthChart) :
+      e("div",{className:"coming-soon"},
+        e("h3",null,"Coming soon"),
+        e("p",null,"This chart will be available once data analysis is complete.")
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>

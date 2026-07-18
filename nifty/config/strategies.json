@@ -1,0 +1,22 @@
+{
+  "strategies": [
+    {
+      "id": "utlrg",
+      "name": "UT-LRG",
+      "description": "UT Bot + Linear Regression Candles on Nifty 5m",
+      "active": true,
+      "instrument": "NIFTY",
+      "exchange": "NSE",
+      "segment": "NFO",
+      "option_type": "weekly",
+      "strike_interval": 50,
+      "lot_size": 65,
+      "timeframe_minutes": 5,
+      "trading_start": "09:25",
+      "trading_end": "15:00",
+      "squareoff_time": "15:20",
+      "webhook_path": "/webhook/utlrg",
+      "day_bias": "no_trade"
+    }
+  ]
+}

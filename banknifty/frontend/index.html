@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SMB Algo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:        #F4F6F9;
+  --surface:   #FFFFFF;
+  --surface2:  #F0F2F5;
+  --border:    #E2E6ED;
+  --border2:   #CBD2DC;
+
+  --text-0:    #0F1923;
+  --text-1:    #2D3748;
+  --text-2:    #64748B;
+  --text-3:    #94A3B8;
+
+  --buy:       #0A7C4B;
+  --buy-bg:    #EDFAF4;
+  --buy-bd:    #A7E3C8;
+  --buy-dark:  #065F38;
+
+  --sell:      #C0171D;
+  --sell-bg:   #FEF2F2;
+  --sell-bd:   #FCA5A5;
+  --sell-dark: #991B1B;
+
+  --blue:      #1D4ED8;
+  --blue-bg:   #EFF6FF;
+  --blue-bd:   #BFDBFE;
+
+  --amber:     #B45309;
+  --amber-bg:  #FFFBEB;
+  --amber-bd:  #FCD34D;
+
+  --mono:      'DM Mono', monospace;
+  --sans:      'DM Sans', sans-serif;
+  --r:         10px;
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+}
+
+html,body{min-height:100%;background:var(--bg);color:var(--text-0);font-family:var(--sans);font-size:14px;line-height:1.5}
+
+/* ── Topbar ── */
+.topbar{background:var(--text-0);color:#fff;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-brand{display:flex;align-items:center;gap:12px}
+.topbar-logo{font-family:var(--mono);font-size:15px;font-weight:500;letter-spacing:0.06em;color:#fff}
+.topbar-sub{font-size:11px;color:#94A3B8;font-family:var(--mono)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-time{font-family:var(--mono);font-size:13px;color:#CBD2DC;background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px}
+
+/* ── Nav ── */
+.nav{background:var(--surface);border-bottom:2px solid var(--border);padding:0 24px;display:flex;gap:4px}
+.nav-tab{padding:12px 18px;font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;font-family:var(--sans)}
+.nav-tab:hover{color:var(--text-0)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+
+/* ── Page ── */
+.page{padding:24px;max-width:1200px;margin:0 auto}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.card-title{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Grid ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.stack{display:flex;flex-direction:column;gap:16px}
+
+/* ── Signal Badge ── */
+.sig-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:500}
+.sig-badge.buy{background:var(--buy-bg);color:var(--buy);border:1.5px solid var(--buy-bd)}
+.sig-badge.sell{background:var(--sell-bg);color:var(--sell);border:1.5px solid var(--sell-bd)}
+.sig-badge.none{background:var(--surface2);color:var(--text-2);border:1.5px solid var(--border)}
+.sig-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sig-badge.buy .sig-dot{background:var(--buy);animation:pulse 1.5s infinite}
+.sig-badge.sell .sig-dot{background:var(--sell);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+
+/* ── Status dot ── */
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-green{background:#16A34A}
+.dot-red{background:#DC2626}
+.dot-amber{background:#D97706}
+.dot-grey{background:#94A3B8}
+
+/* ── Metric ── */
+.metric{display:flex;flex-direction:column;gap:4px}
+.metric-label{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em}
+.metric-value{font-family:var(--mono);font-size:24px;font-weight:500;color:var(--text-0)}
+.metric-value.sm{font-size:18px}
+.metric-value.pos{color:var(--buy)}
+.metric-value.neg{color:var(--sell)}
+.metric-sub{font-size:12px;color:var(--text-3);font-family:var(--mono)}
+
+/* ── Signal Panel ── */
+.signal-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:var(--shadow)}
+.signal-panel-left{display:flex;align-items:center;gap:24px}
+.signal-meta{display:flex;flex-direction:column;gap:3px}
+.signal-meta-label{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em}
+.signal-meta-time{font-size:12px;color:var(--text-3);font-family:var(--mono)}
+.signal-panel-right{display:flex;align-items:center;gap:12px}
+
+/* ── Status bar ── */
+.status-bar{display:flex;gap:20px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px}
+.status-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text-1)}
+
+/* ── Account Card ── */
+.account-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.account-card.halted{border-color:var(--sell-bd);background:var(--sell-bg)}
+.account-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.account-name{font-size:15px;font-weight:600;color:var(--text-0)}
+.account-body{padding:16px 20px}
+.account-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* ── Badge ── */
+.badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;letter-spacing:0.06em;text-transform:uppercase}
+.badge-paper{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.badge-live{background:var(--buy-bg);color:var(--buy);border:1px solid var(--buy-bd)}
+.badge-halted{background:var(--sell-bg);color:var(--sell);border:1px solid var(--sell-bd)}
+
+/* ── P&L Bar ── */
+.pnl-bar-wrap{margin-bottom:16px}
+.pnl-bar-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.pnl-bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease;background:#16A34A}
+.pnl-bar-fill.warn{background:#D97706}
+.pnl-bar-fill.danger{background:#DC2626}
+.pnl-bar-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-2);font-family:var(--mono)}
+
+/* ── Position Box ── */
+.position-box{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
+.position-box.long{background:var(--buy-bg);border-color:var(--buy-bd)}
+.position-box.short{background:var(--sell-bg);border-color:var(--sell-bd)}
+.position-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.position-dir{font-size:13px;font-weight:700;font-family:var(--mono)}
+.position-dir.long{color:var(--buy)}
+.position-dir.short{color:var(--sell)}
+.position-symbol{font-size:14px;font-weight:600;color:var(--text-0);font-family:var(--mono)}
+.position-expiry{font-size:12px;color:var(--text-2);font-family:var(--mono)}
+.position-details{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.pos-field-label{font-size:10px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.06em}
+.pos-field-value{font-size:13px;font-weight:500;color:var(--text-0);font-family:var(--mono);margin-top:2px}
+.no-position{text-align:center;padding:14px;border:1.5px dashed var(--border2);border-radius:8px;font-size:13px;color:var(--text-3);margin-bottom:14px}
+
+/* ── Buttons ── */
+.btn{padding:8px 16px;border-radius:7px;border:1.5px solid;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-ghost{background:transparent;border-color:var(--border2);color:var(--text-1)}
+.btn-ghost:hover:not(:disabled){background:var(--surface2);border-color:var(--border2)}
+.btn-blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-blue:hover:not(:disabled){background:#1E40AF}
+.btn-green{background:var(--buy);border-color:var(--buy);color:#fff}
+.btn-green:hover:not(:disabled){background:var(--buy-dark)}
+.btn-kill{background:var(--sell-bg);border-color:var(--sell-bd);color:var(--sell);font-weight:600}
+.btn-kill:hover:not(:disabled){background:var(--sell);color:#fff;border-color:var(--sell)}
+.btn-kill-master{background:var(--sell);border-color:var(--sell);color:#fff;font-weight:700;padding:10px 20px;font-size:14px}
+.btn-kill-master:hover{background:#991B1B}
+.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ── Alert ── */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;font-weight:500}
+.alert-warn{background:var(--amber-bg);border:1.5px solid var(--amber-bd);color:var(--amber)}
+.alert-err{background:var(--sell-bg);border:1.5px solid var(--sell-bd);color:var(--sell)}
+.alert-ok{background:var(--buy-bg);border:1.5px solid var(--buy-bd);color:var(--buy)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,25,35,0.6);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(3px)}
+.modal{background:var(--surface);border:1.5px solid var(--sell-bd);border-radius:var(--r);padding:28px;max-width:380px;width:90%;box-shadow:var(--shadow-md)}
+.modal-title{font-size:16px;font-weight:700;color:var(--sell);margin-bottom:10px}
+.modal-body{font-size:14px;color:var(--text-1);margin-bottom:20px;line-height:1.6}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--surface2)}
+td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-1);white-space:nowrap}
+tr:hover td{background:var(--surface2)}
+tr:last-child td{border-bottom:none}
+.td-pos{color:var(--buy);font-weight:600;font-family:var(--mono)}
+.td-neg{color:var(--sell);font-weight:600;font-family:var(--mono)}
+.td-mono{font-family:var(--mono)}
+
+/* ── Form ── */
+.form-group{margin-bottom:16px}
+.form-label{font-size:11px;font-weight:600;color:var(--text-1);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:6px}
+.form-input{width:100%;padding:9px 12px;border-radius:7px;background:var(--surface);border:1.5px solid var(--border2);color:var(--text-0);font-family:var(--sans);font-size:14px;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--blue)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-hint{font-size:11px;color:var(--text-3);margin-top:4px}
+
+/* ── Session card ── */
+.session-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:var(--shadow)}
+.session-name{font-size:14px;font-weight:600;color:var(--text-0);margin-bottom:4px}
+.session-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+
+/* ── Divider ── */
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ── Info box ── */
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-key{font-size:12px;color:var(--text-2);font-weight:500}
+.info-val{font-size:12px;font-weight:600;color:var(--text-0);font-family:var(--mono)}
+
+/* ── Toggle ── */
+.toggle-wrap{display:flex;align-items:center;gap:10px}
+.toggle{width:40px;height:22px;border-radius:11px;background:var(--border2);border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0}
+.toggle.on{background:var(--buy)}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
+.toggle.on::after{transform:translateX(18px)}
+.toggle-label{font-size:13px;font-weight:500;color:var(--text-1)}
+
+@media(max-width:768px){
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .account-metrics{grid-template-columns:1fr 1fr}
+  .signal-panel{flex-direction:column;align-items:flex-start}
+  .page{padding:16px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const {useState,useEffect,useCallback,useRef} = React;
+const e = React.createElement;
+const API = window.location.origin + '/banknifty';
+
+async function api(path,opts={}){
+  try{const r=await fetch(API+path,opts);return await r.json()}
+  catch(err){console.error(path,err);return null}
+}
+
+// ── Mock data ──
+function mockDash(){
+  return {
+    date:new Date().toISOString().slice(0,10),
+    time:new Date().toISOString(),
+    last_signal:{signal:'BUY',signal_date:new Date().toISOString().slice(0,10),signal_time:new Date().toISOString()},
+    holiday_status:{status:'ok',message:'Calendar valid through 2026-12-31'},
+    system:{webhook_active:true,scheduler_running:true},
+    accounts:[{
+      account:'Primary',paper_mode:true,active:true,
+      daily_loss_limit:5000,trading_halted:false,
+      realised_pnl:-1240,mtm_pnl:380,combined_pnl:-860,trade_count:3,
+      open_position:{id:12,signal:'BUY',strike:23300,option_type:'CE',
+        expiry:'2026-06-09',lots:1,entry_price:148.5,
+        entry_time:new Date(Date.now()-3600000).toISOString(),entry_spot:23742}
+    }]
+  };
+}
+function mockTrades(){
+  return {trades:[
+    {id:12,date:'2026-06-05',account:'Primary',paper_mode:true,signal:'BUY',instrument:'NIFTY 23300 CE',expiry:'2026-06-09',lots:1,entry_price:148.5,exit_price:null,pnl:null,pnl_pct:null,exit_reason:null,entry_time:'2026-06-05T04:00:00Z',exit_time:null},
+    {id:11,date:'2026-06-04',account:'Primary',paper_mode:true,signal:'SELL',instrument:'NIFTY 23750 PE',expiry:'2026-06-09',lots:1,entry_price:162.0,exit_price:148.5,pnl:-1012.5,pnl_pct:-4.2,exit_reason:'REVERSE_SIGNAL',entry_time:'2026-06-04T02:30:00Z',exit_time:'2026-06-04T04:00:00Z'},
+    {id:10,date:'2026-06-03',account:'Primary',paper_mode:true,signal:'BUY',instrument:'NIFTY 23650 CE',expiry:'2026-06-09',lots:1,entry_price:135.0,exit_price:112.0,pnl:-1725.0,pnl_pct:-12.2,exit_reason:'EOD',entry_time:'2026-06-03T06:15:00Z',exit_time:'2026-06-03T09:50:00Z'},
+    {id:9,date:'2026-06-02',account:'Primary',paper_mode:true,signal:'SELL',instrument:'NIFTY 23800 PE',expiry:'2026-06-09',lots:1,entry_price:178.0,exit_price:210.5,pnl:2437.5,pnl_pct:18.3,exit_reason:'REVERSE_SIGNAL',entry_time:'2026-06-02T04:00:00Z',exit_time:'2026-06-02T07:30:00Z'},
+  ]};
+}
+
+// ── Helpers ──
+function fmt(n){if(n==null)return'—';const a=Math.abs(n).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});return(n>=0?'+':'−')+'₹'+a}
+function fmtIST(iso){if(!iso)return'—';return new Date(iso).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Asia/Kolkata',hour12:false})+' IST'}
+function fmtDate(iso){if(!iso)return'—';return new Date(iso).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+function pnlCls(v){if(v==null)return'td-mono';return v>=0?'td-pos':'td-neg'}
+function metCls(v){if(!v||v===0)return'';return v>0?'pos':'neg'}
+
+// ── Clock ──
+function Clock(){
+  const[t,setT]=useState('');
+  useEffect(()=>{
+    const tick=()=>setT(new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Asia/Kolkata',hour12:true})+' IST');
+    tick();const id=setInterval(tick,1000);return()=>clearInterval(id);
+  },[]);
+  return e('span',{className:'topbar-time'},t);
+}
+
+// ── Kill Modal ──
+function KillModal({target,onConfirm,onCancel}){
+  return e('div',{className:'modal-overlay'},
+    e('div',{className:'modal'},
+      e('div',{className:'modal-title'},'⚠ Confirm Kill Switch'),
+      e('div',{className:'modal-body'},
+        target==='all'
+          ?'This will immediately square off ALL open positions across ALL accounts and halt trading for the rest of the day.'
+          :`This will square off the open position for "${target}" and halt trading for that account today.`,
+        e('br'),e('br'),
+        e('strong',{style:{color:'var(--sell)'}},'This cannot be undone.')
+      ),
+      e('div',{className:'modal-btns'},
+        e('button',{className:'btn btn-ghost',onClick:onCancel},'Cancel'),
+        e('button',{className:'btn btn-kill',onClick:onConfirm},'Confirm Kill')
+      )
+    )
+  );
+}
+
+// ── P&L Bar ──
+function PnLBar({combined,limit}){
+  const pct=limit>0?Math.min(100,Math.abs(combined)/limit*100):0;
+  const cls=pct>80?'danger':pct>50?'warn':'';
+  return e('div',{className:'pnl-bar-wrap'},
+    e('div',{className:'pnl-bar-track'},
+      e('div',{className:`pnl-bar-fill ${cls}`,style:{width:`${pct}%`}})
+    ),
+    e('div',{className:'pnl-bar-labels'},
+      e('span',null,`Loss today: ${fmt(combined)}`),
+      e('span',null,`Limit: ${fmt(-limit)}`)
+    )
+  );
+}
+
+// ── Position Box ──
+function PositionBox({pos}){
+  if(!pos)return e('div',{className:'no-position'},'No open position');
+  const dir=pos.signal==='BUY'?'long':'short';
+  return e('div',{className:`position-box ${dir}`},
+    e('div',{className:'position-header'},
+      e('span',{className:`position-dir ${dir}`},dir==='long'?'▲ LONG':'▼ SHORT'),
+      e('span',{className:'position-symbol'},`BANKNIFTY ${pos.strike} ${pos.option_type}`),
+      e('span',{className:'position-expiry'},`Exp ${pos.expiry}`)
+    ),
+    e('div',{className:'position-details'},
+      e('div',null,e('div',{className:'pos-field-label'},'Entry Price'),e('div',{className:'pos-field-value'},`₹${pos.entry_price}`)),
+      e('div',null,e('div',{className:'pos-field-label'},'Lots'),e('div',{className:'pos-field-value'},pos.lots)),
+      e('div',null,e('div',{className:'pos-field-label'},'Entry Time'),e('div',{className:'pos-field-value'},fmtIST(pos.entry_time))),
+      e('div',null,e('div',{className:'pos-field-label'},'Entry Spot'),e('div',{className:'pos-field-value'},pos.entry_spot?`₹${pos.entry_spot}`:'—')),
+      e('div',null,e('div',{className:'pos-field-label'},'LTP'),e('div',{className:'pos-field-value'},pos.current_ltp?`₹${pos.current_ltp}`:'—')),
+      e('div',null,e('div',{className:'pos-field-label'},'Spot Now'),e('div',{className:'pos-field-value'},pos.current_spot?`₹${pos.current_spot}`:'—')),
+      e('div',null,e('div',{className:'pos-field-label'},'Quantity'),e('div',{className:'pos-field-value'},`${pos.total_quantity||pos.lots*65} units`)),
+      e('div',null,e('div',{className:'pos-field-label'},'Trade ID'),e('div',{className:'pos-field-value'},`#${pos.id}`))
+    )
+  );
+}
+
+// ── Account Card ──
+function AccountCard({acct,onKill}){
+  const halted=acct.trading_halted;
+  return e('div',{className:`account-card${halted?' halted':''}`},
+    e('div',{className:'account-header'},
+      e('div',{className:'account-name'},acct.account),
+      e('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+        halted&&e('span',{className:'badge badge-halted'},'Halted'),
+        !halted&&e('span',{className:acct.paper_mode?'badge badge-paper':'badge badge-live'},
+          acct.paper_mode?'Paper Trading':'Live Trading')
+      )
+    ),
+    e('div',{className:'account-body'},
+      e('div',{className:'account-metrics'},
+        e('div',{className:'metric'},
+          e('div',{className:'metric-label'},'Realised P&L'),
+          e('div',{className:`metric-value sm ${metCls(acct.realised_pnl)}`},fmt(acct.realised_pnl))
+        ),
+        e('div',{className:'metric'},
+          e('div',{className:'metric-label'},'MTM P&L'),
+          e('div',{className:`metric-value sm ${metCls(acct.mtm_pnl)}`},fmt(acct.mtm_pnl))
+        ),
+        e('div',{className:'metric'},
+          e('div',{className:'metric-label'},'Trades Today'),
+          e('div',{className:'metric-value sm'},acct.trade_count||0)
+        )
+      ),
+      e(PnLBar,{combined:acct.combined_pnl||0,limit:acct.daily_loss_limit}),
+      e(PositionBox,{pos:acct.open_position}),
+      e('div',{className:'btn-row'},
+        e('button',{
+          className:'btn btn-kill',
+          disabled:!acct.open_position||halted,
+          onClick:()=>onKill(acct.account)
+        },'⚡ Kill Position'),
+        e('button',{
+          className:'btn btn-blue',
+          onClick:()=>window.open(API+'/auth/breeze/login/Primary','_blank','width=480,height=620')
+        },'↻ Refresh Session')
+      )
+    )
+  );
+}
+
+// ── Dashboard ──
+function Dashboard(){
+  const[data,setData]=useState(null);
+  const[kill,setKill]=useState(null);
+
+  const load=useCallback(async()=>{
+    const d=await api('/api/dashboard');
+    setData(d||mockDash());
+  },[]);
+
+  useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id);},[load]);
+
+  const doKill=async(target)=>{
+    setKill(null);
+    if(target==='all')await api('/api/kill-all',{method:'POST'});
+    else await api(`/api/kill/${target}`,{method:'POST'});
+    load();
+  };
+
+  if(!data)return e('div',{className:'page',style:{color:'var(--text-2)',padding:40}},'Loading...');
+
+  const sig=data.last_signal;
+  const hs=data.holiday_status||{};
+  const sys=data.system||{};
+  const total=data.accounts.reduce((s,a)=>s+(a.combined_pnl||0),0);
+
+  return e('div',{className:'page'},
+    kill&&e(KillModal,{target:kill,onConfirm:()=>doKill(kill),onCancel:()=>setKill(null)}),
+
+    hs.status==='expired'&&e('div',{className:'alert alert-err'},'⚠ NSE Holiday calendar EXPIRED — update config/nse_holidays.json immediately!'),
+    hs.status==='warning'&&e('div',{className:'alert alert-warn'},`⚠ NSE Holiday calendar expires soon (${hs.valid_through}). Update before year end.`),
+
+    // Signal panel
+    e('div',{className:'signal-panel',style:{marginBottom:16}},
+      e('div',{className:'signal-panel-left'},
+        e('div',{className:'signal-meta'},
+          e('div',{className:'signal-meta-label'},'BN-UTLRG Signal'),
+          sig&&e('div',{className:'signal-meta-time'},fmtDate(sig.signal_date)+' · '+fmtIST(sig.signal_time))
+        ),
+        sig
+          ?e('span',{className:`sig-badge ${sig.signal.toLowerCase()}`},e('span',{className:'sig-dot'}),sig.signal==='BUY'?'BUY — Long Call':'SELL — Long Put')
+          :e('span',{className:'sig-badge none'},'No Signal Yet'),
+        e('div',{style:{borderLeft:'1.5px solid var(--border)',paddingLeft:24}},
+          e('div',{className:'metric-label'},'Total P&L Today'),
+          e('div',{className:`metric-value ${metCls(total)}`},fmt(total))
+        ),
+        e('div',null,
+          e('div',{className:'metric-label'},'Accounts Active'),
+          e('div',{className:'metric-value'},data.accounts.filter(a=>a.active).length)
+        )
+      ),
+      e('div',{className:'signal-panel-right'},
+        e('div',{className:'status-bar'},
+          e('div',{className:'status-item'},e('span',{className:`dot ${sys.webhook_active?'dot-green':'dot-red'}`}),'Webhook'),
+          e('div',{className:'status-item'},e('span',{className:`dot ${sys.scheduler_running?'dot-green':'dot-red'}`}),'Scheduler'),
+          e('div',{className:'status-item'},e('span',{className:`dot ${hs.status==='ok'?'dot-green':'dot-amber'}`}),'Calendar')
+        ),
+        e('a',{href:'/',className:'btn',style:{textDecoration:'none'}},'← Nifty'),
+        e('button',{className:'btn btn-kill-master',onClick:()=>setKill('all')},'⚡ Kill All')
+      )
+    ),
+
+    // Account cards
+    e('div',{className:`grid-${Math.min(data.accounts.length,2)}`},
+      ...data.accounts.map(a=>e(AccountCard,{key:a.account,acct:a,onKill:setKill}))
+    )
+  );
+}
+
+// ── Trade Log ──
+function TradeLog(){
+  const[data,setData]=useState(null);
+  const[days,setDays]=useState(7);
+  useEffect(()=>{api(`/api/trades?days=${days}`).then(d=>setData(d||{trades:[]}));},[days]);
+  const trades=data?.trades||[];
+  const exitLabel=r=>{
+    if(!r)return e('span',{style:{color:'var(--buy)',fontWeight:600,fontSize:12}},'OPEN');
+    const m={REVERSE_SIGNAL:['var(--blue)','Reversal'],EOD:['var(--amber)','EOD'],LOSS_LIMIT:['var(--sell)','Loss Limit'],KILL:['var(--sell)','Kill']};
+    const[c,l]=m[r]||['var(--text-2)',r];
+    return e('span',{style:{color:c,fontWeight:600,fontSize:12}},l);
+  };
+  return e('div',{className:'page'},
+    e('div',{className:'card'},
+      e('div',{className:'card-title'},'Trade History'),
+      e('div',{style:{display:'flex',gap:10,marginBottom:16,alignItems:'center'}},
+        e('select',{className:'form-input',style:{width:'auto',minWidth:160},value:days,onChange:ev=>setDays(ev.target.value)},
+          e('option',{value:1},'Today'),
+          e('option',{value:7},'Last 7 days'),
+          e('option',{value:30},'Last 30 days'),
+          e('option',{value:90},'Last 90 days')
+        ),
+        e('span',{style:{fontSize:12,color:'var(--text-2)'}},`${trades.length} trade(s)`)
+      ),
+      e('div',{className:'table-wrap'},
+        e('table',null,
+          e('thead',null,e('tr',null,
+            ['#','Date','Account','Mode','Signal','Instrument','Expiry','Lots','Entry','Exit','P&L','P&L %','Exit Reason','Entry Time','Exit Time']
+            .map(h=>e('th',{key:h},h))
+          )),
+          e('tbody',null,
+            trades.map(t=>e('tr',{key:t.id},
+              e('td',{className:'td-mono'},t.id),
+              e('td',null,t.date),
+              e('td',{style:{fontWeight:500}},t.account),
+              e('td',null,e('span',{className:t.paper_mode?'badge badge-paper':'badge badge-live'},t.paper_mode?'Paper':'Live')),
+              e('td',null,e('span',{className:`sig-badge ${t.signal.toLowerCase()}`,style:{fontSize:11,padding:'2px 8px'}},t.signal)),
+              e('td',{className:'td-mono',style:{fontWeight:500}},t.instrument),
+              e('td',{className:'td-mono'},t.expiry),
+              e('td',{className:'td-mono'},t.lots),
+              e('td',{className:'td-mono'},t.entry_price?`₹${t.entry_price}`:'—'),
+              e('td',{className:'td-mono'},t.exit_price?`₹${t.exit_price}`:'—'),
+              e('td',{className:pnlCls(t.pnl)},fmt(t.pnl)),
+              e('td',{className:pnlCls(t.pnl_pct)},t.pnl_pct!=null?`${t.pnl_pct>0?'+':''}${t.pnl_pct}%`:'—'),
+              e('td',null,exitLabel(t.exit_reason)),
+              e('td',{className:'td-mono'},fmtIST(t.entry_time)),
+              e('td',{className:'td-mono'},fmtIST(t.exit_time))
+            ))
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── Sessions ──
+function Sessions(){
+  const[sessions,setSessions]=useState([]);
+  useEffect(()=>{
+    api('/auth/breeze/session-status').then(d=>setSessions(d?.accounts||[{name:'Primary',has_token:false,paper_mode:true,active:true}]));
+  },[]);
+  const refresh=name=>{
+    localStorage.setItem('pending_account_login',name);
+    const w=window.open(API+`/auth/breeze/login/${name}`,'_blank','width=480,height=620');
+    window.addEventListener('message',ev=>{
+      if(ev.data?.type==='SESSION_READY'){
+        api('/auth/breeze/session-status').then(d=>setSessions(d?.accounts||sessions));
+      }
+    },{once:true});
+  };
+  return e('div',{className:'page'},
+    e('div',{className:'alert alert-warn'},'⚠ Breeze session tokens expire daily. Refresh all accounts before 9:15 AM IST each morning.'),
+    e('div',{className:'card'},
+      e('div',{className:'card-title'},'Account Sessions'),
+      e('div',{className:'stack'},
+        sessions.map(s=>e('div',{key:s.name,className:'session-card'},
+          e('div',null,
+            e('div',{className:'session-name'},s.name),
+            e('div',{className:'session-status'},
+              e('span',{className:`dot ${s.has_token?'dot-green':'dot-red'}`}),
+              e('span',{style:{color:s.has_token?'var(--buy)':'var(--sell)',fontWeight:600}},
+                s.has_token?'Session Active':'Session Expired'),
+              s.paper_mode&&e('span',{className:'badge badge-paper',style:{marginLeft:8}},'Paper')
+            )
+          ),
+          e('button',{className:'btn btn-blue',disabled:!s.active,onClick:()=>refresh(s.name)},'↻ Refresh Session')
+        ))
+      ),
+      e('div',{className:'divider'}),
+      e('div',{className:'info-box'},
+        e('div',{style:{fontSize:12,fontWeight:600,color:'var(--text-1)',marginBottom:10}},'How to refresh each morning:'),
+        ['1. Click Refresh Session for each account','2. Log in on the ICICIdirect page that opens','3. Copy the token from the URL after #token=','4. Paste it in the form and click Activate','5. Green dot confirms active session']
+        .map((s,i)=>e('div',{key:i,style:{fontSize:13,color:'var(--text-1)',padding:'4px 0',borderBottom:i<4?'1px solid var(--border)':'none'}},s))
+      )
+    )
+  );
+}
+
+// ── Settings ──
+function Settings(){
+  const[saved,setSaved]=useState(false);
+  const[v,setV]=useState({quantity_lots:1,lot_size:30,paper_mode:true,daily_loss_limit:20000,limit_buffer:5,trading_start:'09:20',trading_end:'15:00',squareoff_time:'15:20',day_bias:'range',preclosure_lots:0,profit_trigger:40,loss_trigger:40});
+useEffect(()=>{api('/api/dashboard').then(d=>{if(d?.accounts?.[0]){setV(p=>({...p,paper_mode:d.accounts[0].paper_mode,day_bias:d.system?.day_bias||'range',quantity_lots:d.accounts[0].quantity_lots||1,daily_loss_limit:d.accounts[0].daily_loss_limit||20000}));}});}, []);
+  const set=(k,val)=>setV(p=>({...p,[k]:val}));
+  const save=()=>{
+    Promise.all([
+      fetch(API+'/api/settings/lot-size',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lot_size:v.lot_size})}),
+      fetch(API+'/api/settings/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_name:'Primary',quantity_lots:v.quantity_lots,daily_loss_limit:v.daily_loss_limit,limit_buffer:v.limit_buffer})}),
+      fetch(API+'/api/settings/trading-mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_name:'Primary',paper_mode:v.paper_mode})}),      fetch('/banknifty/api/settings/day-bias',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day_bias:v.day_bias})}),      fetch('/banknifty/api/settings/preclosure',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_name:'Primary',preclosure_lots:v.preclosure_lots,profit_trigger:v.profit_trigger,loss_trigger:v.loss_trigger})})
+    ]).then(()=>{setSaved(true);setTimeout(()=>setSaved(false),2500);});
+  };
+  return e('div',{className:'page'},
+    e('div',{className:'grid-2'},
+      e('div',{className:'card'},
+        e('div',{className:'card-title'},'Account — Primary'),
+        e('div',{className:'form-group'},
+          e('div',{className:'form-label'},'Trading Mode'),
+          e('div',{className:'toggle-wrap'},
+            e('button',{className:`toggle ${v.paper_mode?'on':''}`,onClick:()=>set('paper_mode',!v.paper_mode)}),
+            e('span',{className:'toggle-label'},v.paper_mode?'Paper Trading (Simulation Only)':'LIVE TRADING (Real Money!)')
+          ),
+          v.paper_mode
+            ? e('div',{className:'form-hint'},'Safe mode — no real orders placed')
+            : e('div',{className:'form-hint',style:{color:'var(--sell)',fontWeight:600}},'WARNING: Real orders will be placed with real money!')
+        ),
+        e('div',{className:'form-row'},
+          e('div',{className:'form-group'},
+            e('label',{className:'form-label'},'Quantity (Lots)'),
+            e('input',{className:'form-input',type:'number',min:1,value:v.quantity_lots,onChange:ev=>set('quantity_lots',ev.target.value)})
+          ),
+          e('div',{className:'form-group'},
+            e('label',{className:'form-label'},'Daily Loss Limit (₹)'),
+            e('input',{className:'form-input',type:'number',value:v.daily_loss_limit,onChange:ev=>set('daily_loss_limit',ev.target.value)})
+          )
+        ),
+        e('div',{className:'form-group'},
+            e('label',{className:'form-label'},'Lot Size (Units)'),
+            e('input',{className:'form-input',type:'number',min:1,value:v.lot_size,onChange:ev=>set('lot_size',ev.target.value)}),
+            e('div',{className:'form-hint'},'Currently 65. Update when NSE revises.')
+          ),
+          e('div',{className:'form-group'},
+          e('label',{className:'form-label'},'Limit Order Buffer (₹)'),
+          e('input',{className:'form-input',type:'number',value:v.limit_buffer,onChange:ev=>set('limit_buffer',ev.target.value)}),
+          e('div',{className:'form-hint'},'Entry: LTP + buffer · Exit: LTP − buffer')
+        ),
+        e('div',{className:'form-group'},e('label',{className:'form-label'},'Day Bias'),e('select',{className:'form-input',value:v.day_bias,onChange:ev=>set('day_bias',ev.target.value)},e('option',{value:'range'},'Range Bound'),e('option',{value:'bullish'},'Bullish'),e('option',{value:'bearish'},'Bearish'),e('option',{value:'no_trade'},'No Trade'))),e('div',{className:'form-group'},e('label',{className:'form-label'},'Pre-closure Lots'),e('input',{className:'form-input',type:'number',min:0,value:v.preclosure_lots,onChange:ev=>set('preclosure_lots',ev.target.value)}),e('div',{className:'form-hint'},'0 = disabled')),e('div',{className:'form-row'},e('div',{className:'form-group'},e('label',{className:'form-label'},'Profit Trigger (%)'),e('input',{className:'form-input',type:'number',min:1,value:v.profit_trigger,onChange:ev=>set('profit_trigger',ev.target.value)})),e('div',{className:'form-group'},e('label',{className:'form-label'},'Loss Trigger (%)'),e('input',{className:'form-input',type:'number',min:1,value:v.loss_trigger,onChange:ev=>set('loss_trigger',ev.target.value)}))),e('button',{className:'btn btn-green',onClick:save},saved?'✓ Saved':'Save Settings')
+      ),
+      e('div',{className:'card'},
+        e('div',{className:'card-title'},'Trading Hours'),
+        e('div',{className:'form-row'},
+          e('div',{className:'form-group'},
+            e('label',{className:'form-label'},'Trading Start'),
+            e('input',{className:'form-input',type:'time',value:v.trading_start,onChange:ev=>set('trading_start',ev.target.value)})
+          ),
+          e('div',{className:'form-group'},
+            e('label',{className:'form-label'},'Last Entry'),
+            e('input',{className:'form-input',type:'time',value:v.trading_end,onChange:ev=>set('trading_end',ev.target.value)})
+          )
+        ),
+        e('div',{className:'form-group'},
+          e('label',{className:'form-label'},'Force Square-off'),
+          e('input',{className:'form-input',type:'time',value:v.squareoff_time,onChange:ev=>set('squareoff_time',ev.target.value)})
+        ),
+        e('div',{className:'alert alert-warn',style:{marginTop:0}},'Changes take effect from next trading day only.')
+      ),
+      e('div',{className:'card'},
+        e('div',{className:'card-title'},'NSE Holiday Calendar'),
+        e('div',{className:'info-box'},
+          e('div',{className:'info-row'},e('span',{className:'info-key'},'File'),e('span',{className:'info-val'},'nse_holidays.json')),
+          e('div',{className:'info-row'},e('span',{className:'info-key'},'Valid Through'),e('span',{className:'info-val'},'2026-12-31')),
+          e('div',{className:'info-row'},e('span',{className:'info-key'},'Holidays Loaded'),e('span',{className:'info-val'},'7')),
+          e('div',{className:'info-row'},e('span',{className:'info-key'},'Status'),e('span',{className:'info-val',style:{color:'var(--buy)'}},'✓ Current'))
+        ),
+        e('div',{className:'divider'}),
+        e('div',{style:{fontSize:12,color:'var(--text-2)',lineHeight:1.8}},
+          e('strong',null,'Update every December:'),' Download from nseindia.com → About NSE → Circulars → "trading holidays 2027" and update the config file.'
+        )
+      ),
+      e('div',{className:'card'},
+        e('div',{className:'card-title'},'Platform Info'),
+        e('div',{className:'info-box'},
+          [['Platform','SMB Algo v1.0'],['Strategy','BN-UTLRG'],['Instrument','BANKNIFTY Monthly Options'],
+           ['Timeframe','5 minutes'],['Strike Interval','50 points'],['Lot Size','65 units (update in Account Settings if NSE revises)'],
+           ['Expiry Day','Tuesday'],['Broker','ICICIdirect Breeze API']]
+          .map(([k,v])=>e('div',{key:k,className:'info-row'},
+            e('span',{className:'info-key'},k),e('span',{className:'info-val'},v)
+          ))
+        )
+      )
+    )
+  );
+}
+
+// ── App ──
+function App(){
+  const[tab,setTab]=useState('dashboard');
+  const tabs=[{id:'dashboard',label:'Dashboard'},{id:'trades',label:'Trade Log'},{id:'sessions',label:'Sessions'},{id:'settings',label:'Settings'}];
+  const page=()=>{switch(tab){case'dashboard':return e(Dashboard);case'trades':return e(TradeLog);case'sessions':return e(Sessions);case'settings':return e(Settings);}};
+  return e('div',null,
+    e('div',{className:'topbar'},
+      e('div',{className:'topbar-brand'},
+        e('span',{className:'topbar-logo'},'SMB ALGO'),
+        e('span',{className:'topbar-sub'},'BN-UTLRG · BANKNIFTY MONTHLY OPTIONS')
+      ),
+      e('div',{className:'topbar-right'},e(Clock))
+    ),
+    e('div',{className:'nav'},
+      tabs.map(t=>e('button',{key:t.id,className:`nav-tab${tab===t.id?' active':''}`,onClick:()=>setTab(t.id)},t.label))
+    ),
+    page()
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+</script>
+</body>
+</html>

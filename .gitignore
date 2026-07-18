@@ -1,0 +1,8 @@
+*.env
+*.db
+__pycache__/
+*.pyc
+*.log
+venv/
+*.sqlite
+html_writer.py

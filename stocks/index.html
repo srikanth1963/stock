@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SMB Algo Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F6F9;--surface:#FFFFFF;--surface2:#F0F2F5;--border:#E2E6ED;--border2:#CBD2DC;
+  --text-0:#0F1923;--text-1:#2D3748;--text-2:#64748B;--text-3:#94A3B8;
+  --buy:#0A7C4B;--buy-bg:#EDFAF4;--buy-bd:#A7E3C8;--buy-dark:#065F38;
+  --sell:#C0171D;--sell-bg:#FEF2F2;--sell-bd:#FCA5A5;--sell-dark:#991B1B;
+  --blue:#1D4ED8;--blue-bg:#EFF6FF;--blue-bd:#BFDBFE;
+  --amber:#B45309;--amber-bg:#FFFBEB;--amber-bd:#FCD34D;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--r:10px;
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:0 4px 6px rgba(0,0,0,0.07),0 2px 4px rgba(0,0,0,0.04);
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text-0);font-family:var(--sans);font-size:14px;line-height:1.5}
+.topbar{background:var(--text-0);color:#fff;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-brand{display:flex;align-items:center;gap:12px}
+.topbar-logo{font-family:var(--mono);font-size:15px;font-weight:500;letter-spacing:0.06em;color:#fff}
+.topbar-sub{font-size:11px;color:#94A3B8;font-family:var(--mono)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-time{font-family:var(--mono);font-size:13px;color:#CBD2DC;background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px}
+.nav{background:var(--surface);border-bottom:2px solid var(--border);padding:0 24px;display:flex;gap:4px}
+.nav-tab{padding:12px 18px;font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;font-family:var(--sans)}
+.nav-tab:hover{color:var(--text-0)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.page{padding:24px;max-width:1200px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.card-title{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.sig-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:500}
+.sig-badge.buy{background:var(--buy-bg);color:var(--buy);border:1.5px solid var(--buy-bd)}
+.sig-badge.sell{background:var(--sell-bg);color:var(--sell);border:1.5px solid var(--sell-bd)}
+.sig-badge.none{background:var(--surface2);color:var(--text-2);border:1.5px solid var(--border)}
+.sig-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sig-badge.buy .sig-dot{background:var(--buy);animation:pulse 1.5s infinite}
+.sig-badge.sell .sig-dot{background:var(--sell);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-green{background:#16A34A}.dot-red{background:#DC2626}.dot-amber{background:#D97706}.dot-grey{background:#94A3B8}
+.metric{display:flex;flex-direction:column;gap:4px}
+.metric-label{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em}
+.metric-value{font-family:var(--mono);font-size:24px;font-weight:500;color:var(--text-0)}
+.metric-value.sm{font-size:18px}
+.metric-value.pos{color:var(--buy)}.metric-value.neg{color:var(--sell)}
+.metric-sub{font-size:12px;color:var(--text-3);font-family:var(--mono)}
+.signal-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:var(--shadow)}
+.signal-panel-left{display:flex;align-items:center;gap:24px}
+.signal-meta{display:flex;flex-direction:column;gap:3px}
+.signal-meta-label{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em}
+.signal-meta-time{font-size:12px;color:var(--text-3);font-family:var(--mono)}
+.signal-panel-right{display:flex;align-items:center;gap:12px}
+.status-bar{display:flex;gap:20px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px}
+.status-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text-1)}
+.account-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.account-card.halted{border-color:var(--sell-bd);background:var(--sell-bg)}
+.account-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.account-name{font-size:15px;font-weight:600;color:var(--text-0)}
+.account-body{padding:16px 20px}
+.account-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;letter-spacing:0.06em;text-transform:uppercase}
+.badge-paper{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.badge-live{background:var(--buy-bg);color:var(--buy);border:1px solid var(--buy-bd)}
+.badge-halted{background:var(--sell-bg);color:var(--sell);border:1px solid var(--sell-bd)}
+.badge-inactive{background:var(--surface2);color:var(--text-2);border:1px solid var(--border)}
+.pnl-bar-wrap{margin-bottom:16px}
+.pnl-bar-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.pnl-bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease;background:#16A34A}
+.pnl-bar-fill.warn{background:#D97706}.pnl-bar-fill.danger{background:#DC2626}
+.pnl-bar-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-2);font-family:var(--mono)}
+.no-position{text-align:center;padding:14px;border:1.5px dashed var(--border2);border-radius:8px;font-size:13px;color:var(--text-3);margin-bottom:14px}
+.btn{padding:8px 16px;border-radius:7px;border:1.5px solid;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-ghost{background:transparent;border-color:var(--border2);color:var(--text-1)}
+.btn-ghost:hover:not(:disabled){background:var(--surface2)}
+.btn-blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-blue:hover:not(:disabled){background:#1E40AF}
+.btn-green{background:var(--buy);border-color:var(--buy);color:#fff}
+.btn-green:hover:not(:disabled){background:var(--buy-dark)}
+.btn-kill{background:var(--sell-bg);border-color:var(--sell-bd);color:var(--sell);font-weight:600}
+.btn-kill:hover:not(:disabled){background:var(--sell);color:#fff;border-color:var(--sell)}
+.btn-kill-master{background:var(--sell);border-color:var(--sell);color:#fff;font-weight:700;padding:10px 20px;font-size:14px}
+.btn-kill-master:hover{background:#991B1B}
+.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;font-weight:500}
+.alert-warn{background:var(--amber-bg);border:1.5px solid var(--amber-bd);color:var(--amber)}
+.alert-err{background:var(--sell-bg);border:1.5px solid var(--sell-bd);color:var(--sell)}
+.alert-ok{background:var(--buy-bg);border:1.5px solid var(--buy-bd);color:var(--buy)}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,25,35,0.6);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(3px)}
+.modal{background:var(--surface);border:1.5px solid var(--sell-bd);border-radius:var(--r);padding:28px;max-width:380px;width:90%;box-shadow:var(--shadow-md)}
+.modal-title{font-size:16px;font-weight:700;color:var(--sell);margin-bottom:10px}
+.modal-body{font-size:14px;color:var(--text-1);margin-bottom:20px;line-height:1.6}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--surface2)}
+td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-1);white-space:nowrap}
+tr:hover td{background:var(--surface2)}
+tr:last-child td{border-bottom:none}
+.td-pos{color:var(--buy);font-weight:600;font-family:var(--mono)}
+.td-neg{color:var(--sell);font-weight:600;font-family:var(--mono)}
+.td-mono{font-family:var(--mono)}
+.form-group{margin-bottom:16px}
+.form-label{font-size:11px;font-weight:600;color:var(--text-1);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:6px}
+.form-input{width:100%;padding:9px 12px;border-radius:7px;background:var(--surface);border:1.5px solid var(--border2);color:var(--text-0);font-family:var(--sans);font-size:14px;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--blue)}
+.form-hint{font-size:11px;color:var(--text-3);margin-top:4px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-key{font-size:12px;color:var(--text-2);font-weight:500}
+.info-val{font-size:12px;font-weight:600;color:var(--text-0);font-family:var(--mono)}
+/* Landing page */
+.landing-wrap{padding:24px;max-width:900px;margin:0 auto}
+.landing-header{margin-bottom:24px}
+.landing-title{font-size:20px;font-weight:700;color:var(--text-0);margin-bottom:4px}
+.landing-sub{font-size:13px;color:var(--text-2)}
+.account-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.account-list-header{display:grid;grid-template-columns:2fr 1.5fr 1fr 1fr 1.5fr 1fr;gap:12px;padding:10px 20px;background:var(--surface2);border-bottom:2px solid var(--border)}
+.account-list-header span{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em}
+.account-list-row{display:grid;grid-template-columns:2fr 1.5fr 1fr 1fr 1.5fr 1fr;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);align-items:center;transition:background 0.1s}
+.account-list-row:hover{background:var(--surface2)}
+.account-list-row:last-child{border-bottom:none}
+.account-list-row.inactive{opacity:0.5}
+.acc-id{font-size:14px;font-weight:600;color:var(--text-0);font-family:var(--mono)}
+.acc-broker{font-size:13px;color:var(--text-2)}
+.nav-links{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.nav-link{font-size:13px;font-weight:500;color:var(--blue);text-decoration:none;padding:6px 12px;border:1.5px solid var(--blue-bd);border-radius:7px;background:var(--blue-bg);cursor:pointer}
+.nav-link:hover{background:var(--blue);color:#fff}
+.mtm-pill{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px;margin-left:4px}
+.mtm-pos{background:var(--buy-bg);color:var(--buy);border:1px solid var(--buy-bd)}
+.mtm-neg{background:var(--sell-bg);color:var(--sell);border:1px solid var(--sell-bd)}
+.mtm-zero{background:var(--surface2);color:var(--text-2);border:1px solid var(--border)}
+.tag-chip{font-size:11px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:var(--text-2);border:1px solid var(--border);margin:2px;display:inline-block}
+@media(max-width:768px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .account-metrics{grid-template-columns:1fr 1fr}
+  .signal-panel{flex-direction:column;align-items:flex-start}
+  .page{padding:16px}
+  .account-list-header,.account-list-row{grid-template-columns:2fr 1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const {useState,useEffect,useCallback,useRef} = React;
+const e = React.createElement;
+const API = '/stocks';
+
+async function api(path, opts={}) {
+  try {
+    const r = await fetch(API + path, opts);
+    return await r.json();
+  } catch(err) {
+    console.error(path, err);
+    return null;
+  }
+}
+
+// ── Helpers ──
+function fmt(n) {
+  if (n == null) return '—';
+  const a = Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+  return (n >= 0 ? '+' : '−') + '₹' + a;
+}
+function fmtIST(iso) {
+  if (!iso) return '—';
+  if (!iso) return "—"; const d = new Date(iso.includes("Z") || iso.includes("+") ? iso : iso + "Z"); return d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone:'Asia/Kolkata', hour12:false}) + ' IST';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+}
+function pnlCls(v) { if (v == null) return 'td-mono'; return v >= 0 ? 'td-pos' : 'td-neg'; }
+function metCls(v) { if (!v || v === 0) return ''; return v > 0 ? 'pos' : 'neg'; }
+function mtmPillCls(v) { if (!v || v === 0) return 'mtm-zero'; return v > 0 ? 'mtm-pos' : 'mtm-neg'; }
+
+// ── Clock ──
+function Clock() {
+  const [t, setT] = useState('');
+  useEffect(() => {
+    const tick = () => setT(new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone:'Asia/Kolkata', hour12:true}) + ' IST');
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return e('span', {className:'topbar-time'}, t);
+}
+
+// ── Kill Modal ──
+function KillModal({target, onConfirm, onCancel}) {
+  return e('div', {className:'modal-overlay'},
+    e('div', {className:'modal'},
+      e('div', {className:'modal-title'}, '⚠ Confirm Kill Switch'),
+      e('div', {className:'modal-body'},
+        target === 'all'
+          ? 'This will immediately square off ALL open positions and halt trading for the rest of the day.'
+          : `This will square off position #${target}. This cannot be undone.`
+      ),
+      e('div', {className:'modal-btns'},
+        e('button', {className:'btn btn-ghost', onClick:onCancel}, 'Cancel'),
+        e('button', {className:'btn btn-kill', onClick:onConfirm}, 'Confirm Kill')
+      )
+    )
+  );
+}
+
+// ── P&L Bar ──
+function PnLBar({realised, unrealised, limit}) {
+  const combined = (realised || 0) + (unrealised || 0);
+  const loss = Math.min(combined, 0);
+  const pct = limit > 0 ? Math.min(100, Math.abs(loss) / limit * 100) : 0;
+  const cls = pct > 80 ? 'danger' : pct > 50 ? 'warn' : '';
+  return e('div', {className:'pnl-bar-wrap'},
+    e('div', {className:'pnl-bar-track'},
+      e('div', {className:`pnl-bar-fill ${cls}`, style:{width:`${pct}%`}})
+    ),
+    e('div', {className:'pnl-bar-labels'},
+      e('span', null, `Loss today: ${fmt(loss)}`),
+      e('span', null, `Limit: ${fmt(-limit)}`)
+    )
+  );
+}
+
+// ── Positions Table ──
+function PositionsTable({positions, onKill}) {
+  if (!positions || positions.length === 0) {
+    return e('div', {className:'no-position'}, 'No open positions');
+  }
+  return e('div', {className:'table-wrap', style:{marginBottom:14}},
+    e('table', null,
+      e('thead', null, e('tr', null,
+        ['Stock','Strike','CE/PE','Lots','Lot Size','Entry','LTP','P&L','Value','ROI','Action'].map(h => e('th', {key:h}, h))
+      )),
+      e('tbody', null,
+        positions.map(p => e('tr', {key:p.id},
+          e('td', {style:{fontWeight:600}}, p.ticker),
+          e('td', {className:'td-mono'}, p.strike),
+          e('td', null,
+            e('span', {
+              className:`sig-badge ${p.option_type === 'CE' ? 'buy' : 'sell'}`,
+              style:{fontSize:11, padding:'2px 8px'}
+            }, p.option_type)
+          ),
+          e('td', {className:'td-mono'}, p.lots),
+          e('td', {className:'td-mono'}, p.lot_size ? p.lot_size.toLocaleString('en-IN') : '—'),
+          e('td', {className:'td-mono'}, p.entry_price ? `₹${p.entry_price}` : '—'),
+          e('td', {className:'td-mono'}, p.current_ltp ? `₹${p.current_ltp}` : '—'),
+          e('td', {className:pnlCls(p.pnl)}, fmt(p.pnl)),
+          e('td', {className:'td-mono'}, p.contract_value ? `₹${p.contract_value.toLocaleString('en-IN')}` : '—'),
+          e('td', {className:pnlCls(p.roi)}, p.roi !== undefined ? p.roi.toFixed(2)+'%' : '—'),
+          e('td', null,
+            e('button', {
+              className:'btn btn-kill',
+              style:{padding:'4px 10px', fontSize:12},
+              onClick:() => onKill(p.id)
+            }, '⚡ Kill')
+          )
+        ))
+      )
+    )
+  );
+}
+
+// ── Landing Page ──
+function Landing({onSelectAccount, dashData}) {
+  const accounts = dashData?.accounts || [];
+  const sys = dashData?.system || {};
+  const niftyMtm = dashData?.nifty_mtm || 0;
+  const bnMtm = dashData?.bn_mtm || 0;
+
+  return e('div', {className:'landing-wrap'},
+    // Nav links to other apps
+    e('div', {className:'nav-links'},
+      e('a', {className:'nav-link', href:'/'}, '← Nifty'),
+      e('a', {className:'nav-link', href:'/banknifty/'}, '← BankNifty')
+    ),
+
+    e('div', {className:'landing-header'},
+      e('div', {className:'landing-title'}, 'SMB Algo — Stocks F&O'),
+      e('div', {className:'landing-sub'}, 'Select an account to view dashboard')
+    ),
+
+    // System status strip
+    e('div', {className:'status-bar', style:{marginBottom:20, display:'inline-flex'}},
+      e('div', {className:'status-item'}, e('span', {className:`dot ${sys.webhook_active ? 'dot-green' : 'dot-red'}`}), 'Webhook'),
+      e('div', {className:'status-item'}, e('span', {className:`dot ${sys.scheduler_running ? 'dot-green' : 'dot-red'}`}), 'Scheduler'),
+      e('div', {className:'status-item'}, e('span', {className:`dot ${sys.breeze_ok ? 'dot-green' : 'dot-red'}`}), 'Breeze')
+    ),
+
+    // Day Bias selector
+    e('div', {style:{marginBottom:20, display:'flex', gap:8, alignItems:'center'}},
+      e('span', {style:{fontSize:12, fontWeight:600, color:'var(--text-2)', marginRight:4}}, 'DAY BIAS:'),
+      ['range','bullish','bearish','no_trade'].map(b =>
+        e('button', {
+          key:b,
+          className:'btn ' + (dashData?.day_bias === b ? 'btn-blue' : 'btn-ghost'),
+          style:{padding:'5px 12px', fontSize:12, textTransform:'capitalize'},
+          onClick: async () => {
+            await fetch('/stocks/api/day_bias', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({bias:b})});
+          }
+        }, b === 'no_trade' ? 'No Trade' : b.charAt(0).toUpperCase() + b.slice(1))
+      )
+    ),
+    // Account list
+    e('div', {className:'account-list'},
+      e('div', {className:'account-list-header'},
+        e('span', null, 'Account'),
+        e('span', null, 'Broker'),
+        e('span', null, 'Status'),
+        e('span', null, 'Positions'),
+        e('span', null, 'Session'),
+        e('span', null, '')
+      ),
+      accounts.map(acc =>
+        e('div', {key:acc.id, className:`account-list-row ${acc.status === 'Inactive' ? 'inactive' : ''}`},
+          e('div', null,
+            e('div', {className:'acc-id'}, acc.name),
+            e('div', {className:'acc-broker'}, acc.broker)
+          ),
+          e('div', null, e('span', {className:'acc-broker'}, acc.broker)),
+          e('div', null,
+            acc.status === 'Active'
+              ? e('span', {style:{fontSize:12, color:'var(--buy)', fontWeight:600}}, '● Active')
+              : e('span', {style:{fontSize:12, color:'var(--text-2)'}}, '○ Inactive')
+          ),
+          e('div', {className:'td-mono', style:{fontSize:13}}, acc.positions?.length || 0),
+          acc.status === 'Active'
+            ? e('button', {
+                className:'btn btn-blue',
+                style:{padding:'5px 12px', fontSize:12},
+                onClick:() => window.open(API + `/auth/breeze/login/${acc.name}`, '_blank', 'width=480,height=620')
+              }, '↻ Refresh')
+            : e('span', null),
+          acc.status === 'Active'
+            ? e('button', {
+                className:'btn btn-ghost',
+                style:{padding:'5px 12px', fontSize:12},
+                onClick:() => onSelectAccount(acc.id)
+              }, 'View →')
+            : e('span', null)
+        )
+      )
+    )
+  );
+}
+
+// ── Dashboard Tab ──
+function DashboardTab({accData, allData, onKill}) {
+  const [kill, setKill] = useState(null);
+  const sys = allData?.system || {};
+  const sig = allData?.last_signal;
+  const niftyMtm = accData.id === 1 ? (allData?.nifty_mtm || 0) : 0;
+  const bnMtm = accData.id === 1 ? (allData?.bn_mtm || 0) : 0;
+
+  const doKill = async (target) => {
+    setKill(null);
+    if (target === 'all') {
+      await api(`/api/kill_all?account_id=${accData.id}`, {method:'POST'});
+    } else {
+      await api(`/api/exit/${target}`, {method:'POST'});
+    }
+    onKill();
+  };
+
+  const refreshSession = () => {
+    window.open(API + `/auth/breeze/login/${accData.name}`, '_blank', 'width=480,height=620');
+  };
+
+  const restartTrading = async () => {
+    await api(`/api/restart?account_id=${accData.id}`, {method:'POST'});
+    onKill();
+  };
+
+  return e('div', {className:'page'},
+    kill && e(KillModal, {target:kill, onConfirm:() => doKill(kill), onCancel:() => setKill(null)}),
+
+    // Signal + nav panel
+    e('div', {className:'signal-panel', style:{marginBottom:16}},
+      e('div', {className:'signal-panel-left'},
+        e('div', {className:'signal-meta'},
+          e('div', {className:'signal-meta-label'}, 'Last Signal'),
+          sig && e('div', {className:'signal-meta-time'}, fmtDate(sig.received_at) + ' · ' + fmtIST(sig.received_at))
+        ),
+        sig
+          ? e('span', {className:`sig-badge ${sig.direction === 'BUY' ? 'buy' : 'sell'}`},
+              e('span', {className:'sig-dot'}),
+              `${sig.ticker} — ${sig.direction}`
+            )
+          : e('span', {className:'sig-badge none'}, 'No Signal Yet'),
+        e('div', {style:{borderLeft:'1.5px solid var(--border)', paddingLeft:24}},
+          e('div', {className:'metric-label'}, 'Nifty MTM'),
+          e('div', {className:`metric-value sm ${metCls(niftyMtm)}`}, fmt(niftyMtm))
+        ),
+        e('div', null,
+          e('div', {className:'metric-label'}, 'BankNifty MTM'),
+          e('div', {className:`metric-value sm ${metCls(bnMtm)}`}, fmt(bnMtm))
+        )
+      ),
+      e('div', {className:'signal-panel-right'},
+        e('div', {className:'status-bar'},
+          e('div', {className:'status-item'}, e('span', {className:`dot ${sys.webhook_active ? 'dot-green' : 'dot-red'}`}), 'Webhook'),
+          e('div', {className:'status-item'}, e('span', {className:`dot ${sys.scheduler_running ? 'dot-green' : 'dot-red'}`}), 'Scheduler'),
+          e('div', {className:'status-item'}, e('span', {className:`dot ${sys.breeze_ok ? 'dot-green' : 'dot-red'}`}), 'Breeze')
+        ),
+        e('button', {className:'btn btn-kill-master', onClick:() => setKill('all')}, '⚡ Kill All')
+      )
+    ),
+
+    // Account card
+    e('div', {className:`account-card ${accData.loss_limit_hit ? 'halted' : ''}`},
+      e('div', {className:'account-header'},
+        e('div', {className:'account-name'}, accData.name),
+        e('div', {style:{display:'flex', gap:6, alignItems:'center'}},
+          accData.loss_limit_hit && e('span', {className:'badge badge-halted'}, 'Loss Limit Hit'),
+          !accData.loss_limit_hit && e('span', {
+            className: accData.paper_trading ? 'badge badge-paper' : 'badge badge-live',
+            style:{cursor:'pointer'},
+            title: 'Click to toggle Paper/Live mode',
+            onClick: async () => {
+              await fetch('/stocks/api/account/' + accData.id + '/paper_mode', {method:'POST'});
+            }
+          }, accData.paper_trading ? '📄 Paper Trading' : '⚡ Live Trading')
+        )
+      ),
+      e('div', {className:'account-body'},
+        e('div', {className:'account-metrics'},
+          e('div', {className:'metric'},
+            e('div', {className:'metric-label'}, 'Realised P&L'),
+            e('div', {className:`metric-value sm ${metCls(accData.realised_pnl)}`}, fmt(accData.realised_pnl))
+          ),
+          e('div', {className:'metric'},
+            e('div', {className:'metric-label'}, 'MTM P&L'),
+            e('div', {className:`metric-value sm ${metCls(accData.unrealised_pnl)}`}, fmt(accData.unrealised_pnl))
+          ),
+          e('div', {className:'metric'},
+            e('div', {className:'metric-label'}, 'Trades Today'),
+            e('div', {className:'metric-value sm'}, accData.total_trades || 0)
+          )
+        ),
+        e('div', {className:'pnl-bar-wrap'},
+          e('div', {className:'pnl-bar-track'},
+            e('div', {
+              className:'pnl-bar-fill ' + ((accData.total_deployed||0)/(accData.capital||1)*100 > 90 ? 'danger' : (accData.total_deployed||0)/(accData.capital||1)*100 > 70 ? 'warn' : ''),
+              style:{width: Math.min(100,(accData.total_deployed||0)/(accData.capital||1)*100) + '%'}
+            })
+          ),
+          e('div', {className:'pnl-bar-labels'},
+            e('span', null, 'Deployed: ₹' + (accData.total_deployed||0).toLocaleString('en-IN')),
+            e('span', null, 'Capital: ₹' + (accData.capital||0).toLocaleString('en-IN') + ' (90% = ₹' + ((accData.capital||0)*0.9).toLocaleString('en-IN') + ')')
+          )
+        ),
+        e(PnLBar, {
+          realised: accData.realised_pnl,
+          unrealised: accData.unrealised_pnl,
+          limit: accData.max_daily_loss
+        }),
+        e(PositionsTable, {positions:accData.positions, onKill:(id) => setKill(id)}),
+        e('div', {className:'btn-row'},
+          e('button', {className:'btn btn-kill', onClick:() => setKill('all'), disabled:!accData.positions?.length}, '⚡ Kill All Positions'),
+          e('button', {className:'btn btn-blue', onClick:refreshSession}, '↻ Refresh Session'),
+          e('button', {className:'btn btn-green', onClick:restartTrading, disabled:!accData.loss_limit_hit}, '▶ Restart Trading')
+        )
+      )
+    )
+  );
+}
+
+// ── Trade Log Tab ──
+function TradeLog({accountId}) {
+  const [data, setData] = useState(null);
+  const [days, setDays] = useState(7);
+
+  useEffect(() => {
+    api(`/api/trades?days=${days}&account_id=${accountId}`).then(d => setData(d || {trades:[]}));
+  }, [days, accountId]);
+
+  const trades = data?.trades || [];
+
+  const exitLabel = r => {
+    if (!r) return e('span', {style:{color:'var(--buy)', fontWeight:600, fontSize:12}}, 'OPEN');
+    const m = {SIGNAL_REVERSAL:['var(--blue)','Reversal'], EOD_SQUAREOFF:['var(--amber)','EOD'], LOSS_LIMIT:['var(--sell)','Loss Limit'], KILL_ALL:['var(--sell)','Kill'], MANUAL:['var(--text-2)','Manual']};
+    const [c, l] = m[r] || ['var(--text-2)', r];
+    return e('span', {style:{color:c, fontWeight:600, fontSize:12}}, l);
+  };
+
+  return e('div', {className:'page'},
+    e('div', {className:'card'},
+      e('div', {className:'card-title'}, 'Trade History'),
+      e('div', {style:{display:'flex', gap:10, marginBottom:16, alignItems:'center'}},
+        e('select', {className:'form-input', style:{width:'auto', minWidth:160}, value:days, onChange:ev => setDays(ev.target.value)},
+          e('option', {value:1}, 'Today'),
+          e('option', {value:7}, 'Last 7 days'),
+          e('option', {value:30}, 'Last 30 days'),
+          e('option', {value:90}, 'Last 90 days')
+        ),
+        e('span', {style:{fontSize:12, color:'var(--text-2)'}}, `${trades.length} trade(s)`),
+        trades.length > 0 && e('button', {
+          className:'btn btn-ghost',
+          style:{marginLeft:'auto'},
+          onClick:() => {
+            const headers = ['#','Date','Strategy','Stock','Instrument','Direction','Entry','Exit','PnL','Reason'];
+            const rows = trades.map((t,i) => [i+1,t.date,t.strategy||'UTLRG',t.ticker,t.instrument,t.direction,t.entry_price||'',t.exit_price||'',t.pnl||'',t.exit_reason||'OPEN']);
+            const csv = [headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+            a.download = `trades_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+          }
+        }, '⬇ Export CSV')
+      ),
+      e('div', {className:'table-wrap'},
+        e('table', null,
+          e('thead', null, e('tr', null,
+            ['#','Date','Strategy','Stock','Instrument','B/S','Entry','Exit','P&L','Reason','Entry Time','Exit Time']
+            .map(h => e('th', {key:h}, h))
+          )),
+          e('tbody', null,
+            trades.length === 0
+              ? e('tr', null, e('td', {colSpan:12, style:{textAlign:'center', color:'var(--text-3)', padding:20}}, 'No trades in this period'))
+              : trades.map((t,i) => e('tr', {key:t.id},
+                  e('td', {className:'td-mono'}, i+1),
+                  e('td', null, t.date),
+                  e('td', {style:{fontWeight:500}}, t.strategy || 'UTLRG'),
+                  e('td', {style:{fontWeight:600}}, t.ticker),
+                  e('td', {className:'td-mono'}, t.instrument),
+                  e('td', null,
+                    e('span', {className:`sig-badge ${t.direction === 'BUY' ? 'buy' : 'sell'}`, style:{fontSize:11, padding:'2px 8px'}}, t.direction)
+                  ),
+                  e('td', {className:'td-mono'}, t.entry_price ? `₹${t.entry_price}` : '—'),
+                  e('td', {className:'td-mono'}, t.exit_price ? `₹${t.exit_price}` : '—'),
+                  e('td', {className:pnlCls(t.pnl)}, fmt(t.pnl)),
+                  e('td', null, exitLabel(t.exit_reason)),
+                  e('td', {className:'td-mono'}, fmtIST(t.entry_time)),
+                  e('td', {className:'td-mono'}, fmtIST(t.exit_time))
+                ))
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── Settings Tab ──
+function SettingsTab({accData}) {
+  const [stocks, setStocks] = useState([]);
+  const [pullMsg, setPullMsg] = useState('');
+  const [masterMsg, setMasterMsg] = useState('');
+  const [pulling, setPulling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    api(`/api/account/${accData.id}/stocks`).then(d => setStocks(d?.tickers || []));
+  }, [accData.id]);
+
+  const pullGSheet = async () => {
+    setPulling(true); setPullMsg('Pulling...');
+    const r = await api('/api/pull_gsheet', {method:'POST'});
+    setPulling(false);
+    setPullMsg(r?.status === 'ok' ? '✓ Pull successful' : '✗ Pull failed');
+    setTimeout(() => setPullMsg(''), 4000);
+  };
+
+  const refreshMaster = async () => {
+    setRefreshing(true); setMasterMsg('Downloading...');
+    const r = await api('/api/refresh_master', {method:'POST'});
+    setRefreshing(false);
+    setMasterMsg(r?.status === 'ok' ? '✓ Downloaded' : '✗ Failed');
+    setTimeout(() => setMasterMsg(''), 4000);
+  };
+
+  return e('div', {className:'page'},
+    e('div', {className:'grid-2'},
+
+      // Account info
+      e('div', {className:'card'},
+        e('div', {className:'card-title'}, 'Account Configuration'),
+        e('div', {className:'info-box'},
+          e('div', {className:'info-row'}, e('span', {className:'info-key'}, 'Account'), e('span', {className:'info-val'}, accData.name)),
+          e('div', {className:'info-row'}, e('span', {className:'info-key'}, 'Broker'), e('span', {className:'info-val'}, accData.broker || 'ICICIDirect')),
+          e('div', {className:'info-row'}, e('span', {className:'info-key'}, 'Capital'), e('span', {className:'info-val'}, `₹${(accData.capital || 0).toLocaleString('en-IN')}`)),
+          e('div', {className:'info-row'}, e('span', {className:'info-key'}, 'Max Daily Loss'), e('span', {className:'info-val'}, `₹${(accData.max_daily_loss || 0).toLocaleString('en-IN')}`)),
+          e('div', {className:'info-row'}, e('span', {className:'info-key'}, 'Lots per Trade'), e('span', {className:'info-val'}, accData.lots_per_trade || 1)),
+          e('div', {className:'info-row'}, e('span', {className:'info-key'}, 'Status'), e('span', {className:'info-val', style:{color:'var(--buy)'}}, accData.status))
+        ),
+        e('div', {className:'divider'}),
+        e('div', {className:'card-title'}, `Assigned Stocks (${stocks.length})`),
+        e('div', {style:{display:'flex', flexWrap:'wrap', gap:4}},
+          stocks.map(t => e('span', {key:t, className:'tag-chip'}, t))
+        )
+      ),
+
+      // GSheet + Master
+      e('div', {className:'stack'},
+        accData.id === 1 && e('div', {className:'card'},
+          e('div', {className:'card-title'}, 'GSheet Configuration'),
+          e('div', {style:{marginBottom:12, fontSize:13, color:'var(--text-2)'}}, 'Pull latest config, market data, holidays, expiry and results from Google Sheet.'),
+          e('div', {className:'btn-row'},
+            e('button', {className:'btn btn-blue', onClick:pullGSheet, disabled:pulling}, pulling ? '⏳ Pulling...' : '⬇ Pull from GSheet'),
+            pullMsg && e('span', {style:{fontSize:13, color:pullMsg.startsWith('✓') ? 'var(--buy)' : 'var(--sell)'}}, pullMsg)
+          )
+        ),
+        accData.id === 1 && e('div', {className:'card'},
+          e('div', {className:'card-title'}, 'Security Master'),
+          e('div', {style:{marginBottom:12, fontSize:13, color:'var(--text-2)'}}, 'Download fresh F&O security master from ICICI. Run on first trading day of each new expiry after 8:15 AM.'),
+          e('div', {className:'btn-row'},
+            e('button', {className:'btn btn-green', onClick:refreshMaster, disabled:refreshing}, refreshing ? '⏳ Downloading...' : '⬇ Refresh Security Master'),
+            masterMsg && e('span', {style:{fontSize:13, color:masterMsg.startsWith('✓') ? 'var(--buy)' : 'var(--sell)'}}, masterMsg)
+          )
+        ),
+        e('div', {className:'card'},
+          e('div', {className:'card-title'}, 'Platform Info'),
+          e('div', {className:'info-box'},
+            [
+              ['Strategy', 'STOCKS-UTLRG'],
+              ['Instrument', 'F&O Stocks Monthly Options'],
+              ['Strike Selection', 'Highest OI ± 4 strikes from ATM'],
+              ['Expiry Rule', '2-day rollover to next month'],
+              ['Entry Time', '9:20 AM (9:20:30 for stored signals)'],
+              ['Square-off', '3:20 PM daily'],
+              ['Broker', 'ICICIDirect Breeze API']
+            ].map(([k, v]) => e('div', {key:k, className:'info-row'},
+              e('span', {className:'info-key'}, k),
+              e('span', {className:'info-val'}, v)
+            ))
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── Account View ──
+function AccountView({accountId, allData, onBack}) {
+  const [tab, setTab] = useState('dashboard');
+  const accData = allData?.accounts?.find(a => a.id === accountId);
+
+  if (!accData) return e('div', {className:'page'}, 'Account not found');
+
+  const tabs = [
+    {id:'dashboard', label:'Dashboard'},
+    {id:'trades', label:'Trade Log'},
+    {id:'settings', label:'Settings'}
+  ];
+
+  const renderPage = () => {
+    switch(tab) {
+      case 'dashboard': return e(DashboardTab, {accData, allData, onKill:() => {}});
+      case 'trades':    return e(TradeLog, {accountId});
+      case 'settings':  return e(SettingsTab, {accData});
+    }
+  };
+
+  return e('div', null,
+    e('div', {className:'nav'},
+      e('button', {className:'nav-tab', onClick:onBack, style:{color:'var(--blue)'}}, '← Accounts'),
+      e('span', {style:{padding:'12px 8px', color:'var(--text-3)'}}, '|'),
+      tabs.map(t => e('button', {
+        key:t.id,
+        className:`nav-tab${tab === t.id ? ' active' : ''}`,
+        onClick:() => setTab(t.id)
+      }, t.label))
+    ),
+    renderPage()
+  );
+}
+
+// ── App ──
+function App() {
+  const [view, setView] = useState('landing');
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [dashData, setDashData] = useState(null);
+
+  const load = useCallback(async () => {
+    const d = await api('/api/dashboard');
+    if (d) setDashData(d);
+  }, []);
+
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  const selectAccount = (id) => {
+    setSelectedAccount(id);
+    setView('account');
+  };
+
+  return e('div', null,
+    e('div', {className:'topbar'},
+      e('div', {className:'topbar-brand'},
+        e('span', {className:'topbar-logo'}, 'SMB ALGO'),
+        e('span', {className:'topbar-sub'},
+          view === 'account' && selectedAccount && dashData
+            ? `STOCKS · ${dashData.accounts?.find(a => a.id === selectedAccount)?.name?.toUpperCase() || ''}`
+            : 'STOCKS · F&O MONTHLY OPTIONS'
+        )
+      ),
+      e('div', {className:'topbar-right'}, e(Clock))
+    ),
+    view === 'landing'
+      ? e(Landing, {onSelectAccount:selectAccount, dashData})
+      : e(AccountView, {
+          accountId:selectedAccount,
+          allData:dashData,
+          onBack:() => setView('landing')
+        })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+</script>
+</body>
+</html>
