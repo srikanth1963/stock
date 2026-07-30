@@ -21,7 +21,7 @@ from contextlib import contextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from kotak_client import KotakClient
+from fake_kotak_client import FakeKotakClient as KotakClient
 
 logger = logging.getLogger("kotak_execute_service")
 app = FastAPI()
