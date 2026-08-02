@@ -23,7 +23,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pyotp
+from dotenv import load_dotenv
 from neo_api_client import NeoAPI
+
+load_dotenv(override=True)  # .env always wins, even over a stale manual export
 
 logger = logging.getLogger("kotak_client")
 
