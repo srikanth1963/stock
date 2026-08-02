@@ -39,7 +39,6 @@ class OrderResult:
 class KotakClient:
     def __init__(self):
         self.consumer_key = os.environ["KOTAK_CONSUMER_KEY"]
-        self.consumer_secret = os.environ["KOTAK_CONSUMER_SECRET"]
         self.mobile_number = os.environ["KOTAK_MOBILE_NUMBER"]
         self.ucc = os.environ["KOTAK_UCC"]
         self.mpin = os.environ["KOTAK_MPIN"]
@@ -56,7 +55,6 @@ class KotakClient:
         call fails with an auth error."""
         client = NeoAPI(
             consumer_key=self.consumer_key,
-            consumer_secret=self.consumer_secret,
             environment=self.environment,
         )
         client.totp_login(mobile_number=self.mobile_number, ucc=self.ucc, totp=self._current_totp())
