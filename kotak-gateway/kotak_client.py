@@ -104,8 +104,7 @@ class KotakClient:
             return OrderResult(status="error", order_id=None, raw_response={}, message=str(exc))
 
         if resp.get("stat") == "Not_Ok":
-            errs = resp.get("error", [])
-            msg = errs[0]["message"] if errs else "unknown rejection"
+            msg = resp.get("errMsg") or "unknown rejection"
             logger.error("Kotak order rejected: %s", msg)
             return OrderResult(status="rejected", order_id=None, raw_response=resp, message=msg)
 
