@@ -1,0 +1,141 @@
+// ── Report Tab ──
+function ReportTab({accountId}) {
+  const [period, setPeriod] = useState('daily');
+  const [reportDate, setReportDate] = useState(new Date().toISOString().slice(0,10));
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    setData(null);
+    const url = period === 'daily'
+      ? `/api/report/daily?account_id=${accountId}&report_date=${reportDate}`
+      : `/api/report/${period}?account_id=${accountId}`;
+    api(url).then(d => setData(d || {}));
+  }, [period, reportDate, accountId]);
+
+  if (!data) return e('div', {className:'page'}, e('div', {className:'card'}, 'Loading...'));
+
+  const summary = data.summary || {};
+  const stratRows = Object.entries(data.strategy_breakdown || {});
+  const exitRows = Object.entries(data.exit_breakdown || {});
+  const trades = data.trade_log || [];
+  const funnel = data.chartink_funnel;
+  const dailyPnl = data.daily_pnl ? Object.entries(data.daily_pnl) : null;
+
+  const stat = (label, val, cls) => e('div', {style:{flex:'1 1 140px', minWidth:120}},
+    e('div', {style:{fontSize:11, fontWeight:600, color:'var(--text-2)', letterSpacing:0.5, marginBottom:4}}, label.toUpperCase()),
+    e('div', {className:cls, style:{fontSize:20, fontWeight:700}}, val)
+  );
+
+  const exportCsv = () => {
+    if (!trades.length) return;
+    const headers = ['#','Strategy','Stock','Instrument','Direction','Entry','Exit','PnL','Reason'];
+    const rows = trades.map((t,i) => [i+1, t.strategy||'', t.ticker, t.instrument||'', t.direction, t.entry_price||'', t.exit_price||'', t.pnl||'', t.exit_reason||'OPEN']);
+    const csv = [headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    a.download = `report_${period}_${reportDate}.csv`;
+    a.click();
+  };
+
+  return e('div', {className:'page'},
+    e('div', {className:'card'},
+      e('div', {style:{display:'flex', gap:10, alignItems:'center', marginBottom:16, flexWrap:'wrap'}},
+        e('div', {className:'card-title', style:{marginBottom:0}}, 'Report'),
+        e('select', {className:'form-input', style:{width:'auto', minWidth:120}, value:period, onChange:ev => setPeriod(ev.target.value)},
+          e('option', {value:'daily'}, 'Daily'),
+          e('option', {value:'weekly'}, 'Weekly'),
+          e('option', {value:'monthly'}, 'Monthly (Expiry)')
+        ),
+        period === 'daily' && e('input', {type:'date', className:'form-input', style:{width:'auto'}, value:reportDate, onChange:ev => setReportDate(ev.target.value)}),
+        trades.length > 0 && e('button', {className:'btn btn-ghost', style:{marginLeft:'auto'}, onClick:exportCsv}, '⬇ Export CSV')
+      ),
+      period === 'monthly' && data.expiry_date && e('div', {style:{fontSize:12, color:'var(--text-2)', marginBottom:12}}, `Expiry cycle: ${data.expiry_date}`),
+      period === 'weekly' && data.week_start && e('div', {style:{fontSize:12, color:'var(--text-2)', marginBottom:12}}, `${data.week_start} to ${data.week_end}`),
+
+      e('div', {style:{display:'flex', gap:20, flexWrap:'wrap', marginBottom:20, paddingBottom:16, borderBottom:'1px solid var(--border)'}},
+        stat('Trades Closed', summary.trades_closed ?? 0),
+        stat('Win Rate', `${summary.win_rate_pct ?? 0}%`),
+        stat('Total P&L', fmt(summary.total_pnl), pnlCls(summary.total_pnl)),
+        summary.avg_pnl !== undefined && stat('Avg P&L', fmt(summary.avg_pnl), pnlCls(summary.avg_pnl)),
+        summary.open_positions !== undefined && stat('Open Positions', summary.open_positions),
+        summary.unrealized_pnl !== undefined && stat('Unrealized', fmt(summary.unrealized_pnl), pnlCls(summary.unrealized_pnl))
+      ),
+
+      dailyPnl && e('div', {style:{marginBottom:20}},
+        e('div', {style:{fontSize:12, fontWeight:600, color:'var(--text-2)', marginBottom:8}}, 'DAY-BY-DAY P&L'),
+        e('div', {className:'table-wrap'},
+          e('table', null,
+            e('thead', null, e('tr', null, ['Date','P&L'].map(h => e('th', {key:h}, h)))),
+            e('tbody', null, dailyPnl.map(([d,v]) => e('tr', {key:d},
+              e('td', null, d),
+              e('td', {className:pnlCls(v)}, fmt(v))
+            )))
+          )
+        )
+      ),
+
+      stratRows.length > 0 && e('div', {style:{marginBottom:20}},
+        e('div', {style:{fontSize:12, fontWeight:600, color:'var(--text-2)', marginBottom:8}}, 'STRATEGY BREAKDOWN'),
+        e('div', {className:'table-wrap'},
+          e('table', null,
+            e('thead', null, e('tr', null, ['Strategy','Trades','Wins','Losses','Win %','P&L','Avg P&L'].map(h => e('th', {key:h}, h)))),
+            e('tbody', null, stratRows.map(([name, s]) => e('tr', {key:name},
+              e('td', {style:{fontWeight:500}}, name),
+              e('td', {className:'td-mono'}, s.trades),
+              e('td', {className:'td-mono'}, s.wins),
+              e('td', {className:'td-mono'}, s.losses),
+              e('td', {className:'td-mono'}, `${s.win_rate_pct}%`),
+              e('td', {className:pnlCls(s.pnl)}, fmt(s.pnl)),
+              e('td', {className:pnlCls(s.avg_pnl)}, fmt(s.avg_pnl))
+            )))
+          )
+        )
+      ),
+
+      exitRows.length > 0 && e('div', {style:{marginBottom:20}},
+        e('div', {style:{fontSize:12, fontWeight:600, color:'var(--text-2)', marginBottom:8}}, 'EXIT BREAKDOWN'),
+        e('div', {className:'table-wrap'},
+          e('table', null,
+            e('thead', null, e('tr', null, ['Reason','Count','P&L'].map(h => e('th', {key:h}, h)))),
+            e('tbody', null, exitRows.map(([name, s]) => e('tr', {key:name},
+              e('td', null, name),
+              e('td', {className:'td-mono'}, s.count),
+              e('td', {className:pnlCls(s.pnl)}, fmt(s.pnl))
+            )))
+          )
+        )
+      ),
+
+      funnel && e('div', {style:{marginBottom:20}},
+        e('div', {style:{fontSize:12, fontWeight:600, color:'var(--text-2)', marginBottom:8}}, 'CHARTINK FUNNEL'),
+        e('div', {className:'table-wrap'},
+          e('table', null,
+            e('thead', null, e('tr', null, ['Stage','Count'].map(h => e('th', {key:h}, h)))),
+            e('tbody', null, Object.entries(funnel).map(([k,v]) => e('tr', {key:k},
+              e('td', null, k.replace(/_/g,' ')),
+              e('td', {className:'td-mono'}, v)
+            )))
+          )
+        )
+      ),
+
+      trades.length > 0 && e('div', null,
+        e('div', {style:{fontSize:12, fontWeight:600, color:'var(--text-2)', marginBottom:8}}, 'TRADE LOG'),
+        e('div', {className:'table-wrap'},
+          e('table', null,
+            e('thead', null, e('tr', null, ['#','Stock','Strategy','B/S','Entry','Exit','P&L','Reason'].map(h => e('th', {key:h}, h)))),
+            e('tbody', null, trades.map((t,i) => e('tr', {key:t.id || i},
+              e('td', {className:'td-mono'}, i+1),
+              e('td', {style:{fontWeight:600}}, t.ticker),
+              e('td', null, t.strategy || 'UTLRG'),
+              e('td', null, e('span', {className:`sig-badge ${t.direction === 'BUY' ? 'buy' : 'sell'}`, style:{fontSize:11, padding:'2px 8px'}}, t.direction)),
+              e('td', {className:'td-mono'}, t.entry_price ? `₹${t.entry_price}` : '—'),
+              e('td', {className:'td-mono'}, t.exit_price ? `₹${t.exit_price}` : '—'),
+              e('td', {className:pnlCls(t.pnl)}, fmt(t.pnl)),
+              e('td', null, t.exit_reason || 'OPEN')
+            )))
+          )
+        )
+      )
+    )
+  );
+}
